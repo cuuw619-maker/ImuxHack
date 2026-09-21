@@ -14,6 +14,9 @@ void load() {
     auto* mod = Mod::get();
     if (!mod) return;
 
+    if (mod->hasSetting("audio-file"))
+        s.audioFile = mod->getSettingValue<std::filesystem::path>("audio-file").string();
+
     auto readFloat = [&](char const* key, float fallback) {
         if (!mod->hasSetting(key)) {
             log::warn("ImuxHack: setting '{}' is unavailable, using default {}", key, fallback);
@@ -50,6 +53,7 @@ void save() {
     if (!mod) return;
 
     auto& s = settings();
+    if (mod->hasSetting("audio-file")) mod->setSettingValue("audio-file", std::filesystem::path(s.audioFile));
     if (mod->hasSetting("difficulty")) mod->setSettingValue("difficulty", static_cast<double>(s.difficulty));
     if (mod->hasSetting("density")) mod->setSettingValue("density", static_cast<double>(s.density));
     if (mod->hasSetting("sync-strength")) mod->setSettingValue("sync-strength", static_cast<double>(s.syncStrength));
