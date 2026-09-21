@@ -1,6 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/EditorUI.hpp>
 #include "../audio/WavLoader.hpp"
+#include "../audio/AudioSourceResolver.hpp"
 #include "../api/ImuxAPI.hpp"
 #include "../core/Settings.hpp"
 
@@ -9,6 +10,9 @@ using namespace geode::prelude;
 class ImuxEditorPanel final : public FLAlertLayer {
     LevelEditorLayer* m_levelEditor = nullptr;
     CCLabelBMFont* m_status = nullptr;
+    CCLabelBMFont* m_source = nullptr;
+    CCMenu* m_actionMenu = nullptr;
+    bool m_busy = false;
 
     static int objectID(imux::generator::ObjectType type) {
         switch (type) {
@@ -22,26 +26,69 @@ class ImuxEditorPanel final : public FLAlertLayer {
     void setStatus(std::string const& text) {
         if (!m_status) return;
         m_status->setString(text.c_str());
-        m_status->limitLabelWidth(360.f, .42f, .01f);
+        m_status->limitLabelWidth(360.f, .40f, .01f);
+    }
+
+    void setSource(std::string const& text) {
+        if (!m_source) return;
+        m_source->setString(text.c_str());
+        m_source->limitLabelWidth(360.f, .34f, .01f);
+    }
+
+    void setBusy(bool busy) {
+        m_busy = busy;
+        if (m_actionMenu) m_actionMenu->setEnabled(!busy);
+        setStatus(busy ? "IMUX is working..." : "Ready.");
+    }
+
+    std::string levelSongWavPath() const {
+        if (!m_levelEditor || !m_levelEditor->m_level) return {};
+
+        const int songID = m_levelEditor->m_level->m_songID;
+        if (songID < 0) return {};
+
+        auto source = imux::audio::AudioSourceResolver::fromLevelSong(songID);
+        return source.path;
     }
 
     bool generateLevel() {
+        if (m_busy) return false;
+
         imux::core::load();
         auto const& settings = imux::core::settings();
 
-        if (settings.audioFile.empty()) {
-            setStatus("Select a WAV file in Geode settings first.");
+        std::string path = settings.audioFile;
+        bool fromLevel = false;
+
+        // Empty Source Audio means: use the song assigned to the level.
+        if (path.empty()) {
+            path = levelSongWavPath();
+            fromLevel = true;
+        }
+
+        if (path.empty()) {
+            setStatus(
+                "No usable audio found.\n"
+                "Set Source audio or use a level song available as WAV."
+            );
             return false;
         }
 
         imux::audio::PCMBuffer pcm;
         std::string error;
-        if (!imux::audio::loadWav(settings.audioFile, pcm, error)) {
-            setStatus(fmt::format("WAV error: {}", error));
+        if (!imux::audio::loadWav(path, pcm, error)) {
+            setStatus(fmt::format(
+                "{} audio error: {}",
+                fromLevel ? "Level" : "Source",
+                error
+            ));
             return false;
         }
 
-        setStatus("Analyzing audio...");
+        setSource(fromLevel ? "SOURCE: LEVEL SONG" : "SOURCE: IMUX SETTING");
+        setBusy(true);
+        setStatus("Analyzing music...");
+
         auto analysis = imux::API::analyze(
             pcm.mono,
             pcm.sampleRate,
@@ -49,25 +96,29 @@ class ImuxEditorPanel final : public FLAlertLayer {
         );
 
         if (analysis.beats.empty()) {
-            setStatus("No usable beats detected. Lower Beat sensitivity and retry.");
+            setBusy(false);
+            setStatus("No usable beats. Lower Beat sensitivity and retry.");
             return false;
         }
 
-        auto graph = imux::API::generate(analysis, settings);
-        auto validation = imux::API::validate(graph);
+        auto result = imux::API::generate(
+            imux::GenerationRequest{&analysis, &settings}
+        );
 
-        if (graph.objects.empty()) {
+        if (result.graph.objects.empty()) {
+            setBusy(false);
             setStatus("Generator produced no objects.");
             return false;
         }
 
         if (!m_levelEditor) {
+            setBusy(false);
             setStatus("Level editor is unavailable.");
             return false;
         }
 
         std::size_t inserted = 0;
-        for (auto const& object : graph.objects) {
+        for (auto const& object : result.graph.objects) {
             const int id = objectID(object.type);
             if (id == 0) continue;
 
@@ -83,15 +134,16 @@ class ImuxEditorPanel final : public FLAlertLayer {
         }
 
         m_levelEditor->updateEditor(0.f);
+        setBusy(false);
 
-        auto status = fmt::format(
-            "Generated {} objects\nBPM: {:.1f}\nBeats: {}\nWarnings: {}",
+        setStatus(fmt::format(
+            "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
             inserted,
             analysis.bpm,
             analysis.beats.size(),
-            validation.warnings
-        );
-        setStatus(status);
+            result.validation.warnings
+        ));
+
         return inserted > 0;
     }
 
@@ -111,29 +163,29 @@ protected:
             1.f
         )) return false;
 
-        auto title = CCLabelBMFont::create("IMUX BEAT GENERATOR", "goldFont.fnt");
+        auto title = CCLabelBMFont::create("IMUX MUSIC GENERATOR", "goldFont.fnt");
         title->setScale(.72f);
         title->setPosition({210.f, 238.f});
         m_mainLayer->addChild(title);
 
         auto subtitle = CCLabelBMFont::create(
-            "WAV -> analysis -> beat timeline -> playable objects",
+            "MUSIC -> ANALYSIS -> PATTERNS -> GAMEPLAY",
             "bigFont.fnt"
         );
-        subtitle->setScale(.36f);
+        subtitle->setScale(.38f);
         subtitle->setPosition({210.f, 213.f});
         m_mainLayer->addChild(subtitle);
 
-        auto source = CCLabelBMFont::create(
-            "Audio source: configured in Geode > ImuxHack settings",
+        m_source = CCLabelBMFont::create(
+            "SOURCE: LEVEL SONG WHEN NO OVERRIDE IS SET",
             "bigFont.fnt"
         );
-        source->setScale(.34f);
-        source->setPosition({210.f, 184.f});
-        m_mainLayer->addChild(source);
+        m_source->setScale(.34f);
+        m_source->setPosition({210.f, 184.f});
+        m_mainLayer->addChild(m_source);
 
         m_status = CCLabelBMFont::create(
-            "Ready. Select a WAV file and press GENERATE.",
+            "Ready.",
             "bigFont.fnt"
         );
         m_status->setAlignment(kCCTextAlignmentCenter);
@@ -141,9 +193,12 @@ protected:
         m_status->setPosition({210.f, 145.f});
         m_mainLayer->addChild(m_status);
 
-        auto menu = CCMenu::create();
-        menu->setPosition({210.f, 75.f});
-        m_mainLayer->addChild(menu);
+        // FLAlertLayer's dedicated button menu receives touches reliably on Android.
+        // Previously these controls lived directly under m_mainLayer, so only the
+        // built-in CLOSE button was consistently clickable.
+        m_actionMenu = CCMenu::create();
+        m_actionMenu->setPosition({210.f, 78.f});
+        m_buttonMenu->addChild(m_actionMenu);
 
         auto generateSprite = ButtonSprite::create(
             "GENERATE",
@@ -160,10 +215,10 @@ protected:
             menu_selector(ImuxEditorPanel::onGenerate)
         );
         generate->setPosition({-92.f, 0.f});
-        menu->addChild(generate);
+        m_actionMenu->addChild(generate);
 
-        auto settingsSprite = ButtonSprite::create(
-            "SETTINGS",
+        auto levelSprite = ButtonSprite::create(
+            "LEVEL SONG",
             150,
             true,
             "goldFont.fnt",
@@ -171,20 +226,20 @@ protected:
             0.f,
             1.f
         );
-        auto settings = CCMenuItemSpriteExtra::create(
-            settingsSprite,
+        auto levelSong = CCMenuItemSpriteExtra::create(
+            levelSprite,
             this,
-            menu_selector(ImuxEditorPanel::onSettings)
+            menu_selector(ImuxEditorPanel::onLevelSong)
         );
-        settings->setPosition({92.f, 0.f});
-        menu->addChild(settings);
+        levelSong->setPosition({92.f, 0.f});
+        m_actionMenu->addChild(levelSong);
 
         auto help = CCLabelBMFont::create(
-            "Supported now: WAV PCM 16/24/32-bit + float32",
+            "Source audio overrides the level song when configured.",
             "bigFont.fnt"
         );
         help->setScale(.32f);
-        help->setPosition({210.f, 34.f});
+        help->setPosition({210.f, 35.f});
         m_mainLayer->addChild(help);
 
         return true;
@@ -205,14 +260,27 @@ public:
         generateLevel();
     }
 
-    void onSettings(CCObject*) {
-        FLAlertLayer::create(
-            "IMUX SETTINGS",
-            "Open Geode mod settings and choose a WAV file under Source WAV.\n\n"
-            "Difficulty, density, sync, movement, decoration, sensitivity and seed "
-            "control the deterministic generator.",
-            "OK"
-        )->show();
+    void onLevelSong(CCObject*) {
+        if (!m_levelEditor || !m_levelEditor->m_level) {
+            setStatus("No active level.");
+            return;
+        }
+
+        const int songID = m_levelEditor->m_level->m_songID;
+        auto path = levelSongWavPath();
+
+        if (path.empty()) {
+            setStatus(fmt::format(
+                "Level song ID {} was found, but no local WAV was found.",
+                songID
+            ));
+            return;
+        }
+
+        imux::core::settings().audioFile.clear();
+        imux::core::save();
+        setSource(fmt::format("LEVEL SONG: {}", songID));
+        setStatus("Level song selected. Press GENERATE.");
     }
 };
 
@@ -224,7 +292,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
 
         auto menu = this->getChildByID("toolbar-categories-menu");
         if (!menu) {
-            log::warn("ImuxHack: toolbar-categories-menu not found; generator button was not added");
+            log::warn("ImuxHack: toolbar-categories-menu not found");
             return true;
         }
 
