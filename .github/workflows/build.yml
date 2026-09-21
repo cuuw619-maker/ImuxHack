@@ -1,0 +1,24 @@
+name: Build ImuxHack
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build Geode mod
+        uses: geode-sdk/build-geode-mod@main
+        id: build
+        with:
+          target: Win64
+      - name: Upload .geode
+        uses: actions/upload-artifact@v7
+        with:
+          name: ImuxHack-Windows
+          path: ${{ steps.build.outputs.build-output }}
