@@ -1,6 +1,6 @@
 #include "Settings.hpp"
 #include <algorithm>
-#include <limits>
+#include <cmath>
 using namespace geode::prelude;
 
 namespace imux::core {
@@ -31,16 +31,11 @@ void load() {
     s.decoration = readFloat("decoration", 0.45f);
     s.beatSensitivity = readFloat("beat-sensitivity", 0.55f);
 
-    if (mod->hasSetting("seed"))
-        s.seed = static_cast<std::uint32_t>(mod->getSettingValue<int64_t>("seed"));
-    if (mod->hasSetting("show-beat-markers"))
-        s.showBeatMarkers = mod->getSettingValue<bool>("show-beat-markers");
-    if (mod->hasSetting("show-energy"))
-        s.showEnergy = mod->getSettingValue<bool>("show-energy");
-    if (mod->hasSetting("auto-gamemode"))
-        s.autoGamemode = mod->getSettingValue<bool>("auto-gamemode");
-    if (mod->hasSetting("auto-speed"))
-        s.autoSpeed = mod->getSettingValue<bool>("auto-speed");
+    if (mod->hasSetting("seed")) s.seed = static_cast<std::uint32_t>(mod->getSettingValue<int64_t>("seed"));
+    if (mod->hasSetting("show-beat-markers")) s.showBeatMarkers = mod->getSettingValue<bool>("show-beat-markers");
+    if (mod->hasSetting("show-energy")) s.showEnergy = mod->getSettingValue<bool>("show-energy");
+    if (mod->hasSetting("auto-gamemode")) s.autoGamemode = mod->getSettingValue<bool>("auto-gamemode");
+    if (mod->hasSetting("auto-speed")) s.autoSpeed = mod->getSettingValue<bool>("auto-speed");
 
     s.difficulty = std::clamp(s.difficulty, 0.f, 1.f);
     s.density = std::clamp(s.density, 0.1f, 1.f);
