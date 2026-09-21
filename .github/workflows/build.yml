@@ -17,6 +17,7 @@ jobs:
         id: build
         with:
           target: Win64
+          sdk: latest
       - name: Upload .geode
         uses: actions/upload-artifact@v7
         with:
