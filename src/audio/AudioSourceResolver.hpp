@@ -1,6 +1,6 @@
 #pragma once
+#include "WavLoader.hpp"
 #include <string>
-#include <vector>
 
 namespace imux::audio {
 
@@ -14,7 +14,12 @@ class AudioSourceResolver {
 public:
     static AudioSource fromExplicitPath(std::string const& path);
     static AudioSource fromLevelSong(int songID);
-    static bool resolveWav(AudioSource const& source, std::vector<float>& mono, float& sampleRate, std::string& error);
+
+    static bool load(
+        AudioSource const& source,
+        PCMBuffer& out,
+        std::string& error
+    );
 };
 
 }
