@@ -1,5 +1,5 @@
 {
-  "geode": "$GEODE_VERSION",
+  "geode": "v5.10.1",
   "gd": { "win": "2.2081" },
   "id": "cuuw619.imuxhack",
   "name": "ImuxHack",
