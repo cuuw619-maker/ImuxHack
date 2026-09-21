@@ -1,18 +1,21 @@
 {
   "geode": "5.10.1",
-  "gd": { "win": "2.2081" },
+  "gd": {
+    "win": "2.2081",
+    "android": "2.2081"
+  },
   "id": "cuuw619.imuxhack",
   "name": "ImuxHack",
-  "version": "v0.2.1",
+  "version": "v0.3.0",
   "developer": "cuuw619-maker",
-  "description": "Music-driven Geometry Dash level generator with beat analysis and editor tools.",
+  "description": "Cross-platform music-driven Geometry Dash level generator with its own analysis, generation and validation API.",
   "repository": "https://github.com/cuuw619-maker/ImuxHack",
   "links": { "source": "https://github.com/cuuw619-maker/ImuxHack" },
   "dependencies": { "geode.node-ids": ">=v1.23.3" },
   "settings": {
     "audio-file": {
-      "name": "Source WAV",
-      "description": "Windows WAV/PCM file used for beat analysis and generation.",
+      "name": "Source audio",
+      "description": "Audio file used by the IMUX analyzer.",
       "type": "file",
       "default": "",
       "control": {
