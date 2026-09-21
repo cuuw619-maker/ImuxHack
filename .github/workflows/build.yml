@@ -8,18 +8,34 @@ on:
 
 jobs:
   build:
-    name: Windows x64
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            target: Win64
+            runner: windows-latest
+            artifact: ImuxHack-Windows
+          - name: Android arm64
+            target: Android64
+            runner: ubuntu-latest
+            artifact: ImuxHack-Android64
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+
     steps:
       - uses: actions/checkout@v7
+
       - name: Build Geode mod
         uses: geode-sdk/build-geode-mod@main
         id: build
         with:
-          target: Win64
+          target: ${{ matrix.target }}
           sdk: latest
+
       - name: Upload .geode
         uses: actions/upload-artifact@v7
         with:
-          name: ImuxHack-Windows
+          name: ${{ matrix.artifact }}
           path: ${{ steps.build.outputs.build-output }}
