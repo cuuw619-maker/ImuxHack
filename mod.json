@@ -1,0 +1,18 @@
+{
+  "geode": "$GEODE_VERSION",
+  "gd": {
+    "win": "2.2081"
+  },
+  "id": "cuuw619.imuxhack",
+  "name": "ImuxHack",
+  "version": "v0.1.0",
+  "developer": "cuuw619-maker",
+  "description": "Music-driven Geometry Dash level generator for Windows.",
+  "repository": "https://github.com/cuuw619-maker/ImuxHack",
+  "links": {
+    "source": "https://github.com/cuuw619-maker/ImuxHack"
+  },
+  "dependencies": {
+    "geode.node-ids": ">=v1.23.3"
+  }
+}
