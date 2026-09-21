@@ -10,6 +10,18 @@
   "links": { "source": "https://github.com/cuuw619-maker/ImuxHack" },
   "dependencies": { "geode.node-ids": ">=v1.23.3" },
   "settings": {
+    "audio-file": {
+      "name": "Source WAV",
+      "description": "Windows WAV/PCM file used for beat analysis and generation.",
+      "type": "file",
+      "default": "",
+      "control": {
+        "dialog": "open",
+        "filters": [
+          { "description": "WAV audio", "files": ["wav"] }
+        ]
+      }
+    },
     "difficulty": { "name": "Difficulty", "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
     "density": { "name": "Object density", "type": "float", "default": 0.65, "min": 0.1, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
     "sync-strength": { "name": "Sync strength", "type": "float", "default": 0.9, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
