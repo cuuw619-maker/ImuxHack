@@ -41,14 +41,12 @@ class ImuxEditorPanel final : public FLAlertLayer {
         setStatus(busy ? "IMUX is working..." : "Ready.");
     }
 
-    std::string levelSongWavPath() const {
-        if (!m_levelEditor || !m_levelEditor->m_level) return {};
-
-        const int songID = m_levelEditor->m_level->m_songID;
-        if (songID < 0) return {};
-
-        auto source = imux::audio::AudioSourceResolver::fromLevelSong(songID);
-        return source.path;
+    imux::audio::AudioSource levelSongSource() const {
+        if (!m_levelEditor || !m_levelEditor->m_level)
+            return {};
+        return imux::audio::AudioSourceResolver::fromLevelSong(
+            m_levelEditor->m_level->m_songID
+        );
     }
 
     bool generateLevel() {
@@ -57,35 +55,35 @@ class ImuxEditorPanel final : public FLAlertLayer {
         imux::core::load();
         auto const& settings = imux::core::settings();
 
-        std::string path = settings.audioFile;
-        bool fromLevel = false;
-
-        // Empty Source Audio means: use the song assigned to the level.
-        if (path.empty()) {
-            path = levelSongWavPath();
-            fromLevel = true;
+        imux::audio::AudioSource source;
+        if (!settings.audioFile.empty()) {
+            source = imux::audio::AudioSourceResolver::fromExplicitPath(
+                settings.audioFile
+            );
+        } else {
+            source = levelSongSource();
         }
 
-        if (path.empty()) {
+        if (source.path.empty()) {
             setStatus(
-                "No usable audio found.\n"
-                "Set Source audio or use a level song available as WAV."
+                "No level audio found.\n"
+                "Set Source audio or make the level song available locally."
             );
             return false;
         }
 
         imux::audio::PCMBuffer pcm;
         std::string error;
-        if (!imux::audio::loadWav(path, pcm, error)) {
-            setStatus(fmt::format(
-                "{} audio error: {}",
-                fromLevel ? "Level" : "Source",
-                error
-            ));
+        if (!imux::audio::AudioSourceResolver::load(source, pcm, error)) {
+            setStatus(fmt::format("Audio error: {}", error));
             return false;
         }
 
-        setSource(fromLevel ? "SOURCE: LEVEL SONG" : "SOURCE: IMUX SETTING");
+        setSource(source.fromLevel
+            ? fmt::format("LEVEL SONG: {}", source.displayName)
+            : "SOURCE: IMUX SETTING"
+        );
+
         setBusy(true);
         setStatus("Analyzing music...");
 
@@ -184,58 +182,40 @@ protected:
         m_source->setPosition({210.f, 184.f});
         m_mainLayer->addChild(m_source);
 
-        m_status = CCLabelBMFont::create(
-            "Ready.",
-            "bigFont.fnt"
-        );
+        m_status = CCLabelBMFont::create("Ready.", "bigFont.fnt");
         m_status->setAlignment(kCCTextAlignmentCenter);
         m_status->setScale(.40f);
         m_status->setPosition({210.f, 145.f});
         m_mainLayer->addChild(m_status);
 
-        // FLAlertLayer's dedicated button menu receives touches reliably on Android.
-        // Previously these controls lived directly under m_mainLayer, so only the
-        // built-in CLOSE button was consistently clickable.
         m_actionMenu = CCMenu::create();
         m_actionMenu->setPosition({210.f, 78.f});
         m_buttonMenu->addChild(m_actionMenu);
 
         auto generateSprite = ButtonSprite::create(
-            "GENERATE",
-            150,
-            true,
-            "goldFont.fnt",
-            "GJ_button_01.png",
-            0.f,
-            1.f
+            "GENERATE", 150, true, "goldFont.fnt",
+            "GJ_button_01.png", 0.f, 1.f
         );
         auto generate = CCMenuItemSpriteExtra::create(
-            generateSprite,
-            this,
+            generateSprite, this,
             menu_selector(ImuxEditorPanel::onGenerate)
         );
         generate->setPosition({-92.f, 0.f});
         m_actionMenu->addChild(generate);
 
         auto levelSprite = ButtonSprite::create(
-            "LEVEL SONG",
-            150,
-            true,
-            "goldFont.fnt",
-            "GJ_button_02.png",
-            0.f,
-            1.f
+            "LEVEL SONG", 150, true, "goldFont.fnt",
+            "GJ_button_02.png", 0.f, 1.f
         );
         auto levelSong = CCMenuItemSpriteExtra::create(
-            levelSprite,
-            this,
+            levelSprite, this,
             menu_selector(ImuxEditorPanel::onLevelSong)
         );
         levelSong->setPosition({92.f, 0.f});
         m_actionMenu->addChild(levelSong);
 
         auto help = CCLabelBMFont::create(
-            "Source audio overrides the level song when configured.",
+            "No override = analyze the song assigned to this level.",
             "bigFont.fnt"
         );
         help->setScale(.32f);
@@ -261,25 +241,20 @@ public:
     }
 
     void onLevelSong(CCObject*) {
-        if (!m_levelEditor || !m_levelEditor->m_level) {
-            setStatus("No active level.");
-            return;
-        }
-
-        const int songID = m_levelEditor->m_level->m_songID;
-        auto path = levelSongWavPath();
-
-        if (path.empty()) {
+        auto source = levelSongSource();
+        if (source.path.empty()) {
+            const int id = m_levelEditor && m_levelEditor->m_level
+                ? m_levelEditor->m_level->m_songID : -1;
             setStatus(fmt::format(
-                "Level song ID {} was found, but no local WAV was found.",
-                songID
+                "Level song {} is not available as a local MP3/WAV.",
+                id
             ));
             return;
         }
 
         imux::core::settings().audioFile.clear();
         imux::core::save();
-        setSource(fmt::format("LEVEL SONG: {}", songID));
+        setSource(fmt::format("LEVEL SONG: {}", source.displayName));
         setStatus("Level song selected. Press GENERATE.");
     }
 };
@@ -304,8 +279,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
         sprite->setScale(.70f);
 
         auto button = CCMenuItemSpriteExtra::create(
-            sprite,
-            this,
+            sprite, this,
             menu_selector(ImuxEditorUI::onImuxButton)
         );
         button->setID("imux-generator-button");
@@ -316,8 +290,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
     }
 
     void onImuxButton(CCObject*) {
-        if (auto panel = ImuxEditorPanel::create(m_editorLayer)) {
+        if (auto panel = ImuxEditorPanel::create(m_editorLayer))
             panel->show();
-        }
     }
 };
