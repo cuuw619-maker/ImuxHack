@@ -1,38 +1,111 @@
 #include "ImuxAPI.hpp"
 #include "../audio/BeatAnalyzer.hpp"
 #include "../generator/LevelGenerator.hpp"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <mutex>
+#include <utility>
+
 namespace imux {
-audio::AudioAnalysis API::analyze(std::vector<float> const& mono, float rate, float sensitivity) {
-    return audio::BeatAnalyzer{}.analyze(mono, rate, sensitivity);
+namespace {
+std::mutex g_callbackMutex;
+EventCallback g_callback;
+
+void emit(EventType event) {
+    EventCallback callback;
+    {
+        std::lock_guard lock(g_callbackMutex);
+        callback = g_callback;
+    }
+    if (callback) callback(event);
 }
-generator::LevelGraph API::generate(audio::AudioAnalysis const& analysis, core::Settings const& settings) {
-    return generator::LevelGenerator{}.generate(analysis, settings);
 }
+
+audio::AudioAnalysis API::analyze(
+    std::vector<float> const& mono,
+    float rate,
+    float sensitivity
+) {
+    emit(EventType::AnalysisStarted);
+    auto result = audio::BeatAnalyzer{}.analyze(mono, rate, sensitivity);
+    emit(EventType::AnalysisFinished);
+    return result;
+}
+
+GenerationResult API::generate(GenerationRequest const& request) {
+    GenerationResult result;
+    if (!request.analysis || !request.settings) {
+        result.validation.playable = false;
+        result.validation.warnings = 1;
+        result.validation.messages.push_back("GenerationRequest requires analysis and settings.");
+        return result;
+    }
+
+    emit(EventType::GenerationStarted);
+    result.graph = generator::LevelGenerator{}.generate(*request.analysis, *request.settings);
+    emit(EventType::GenerationFinished);
+
+    result.validation = validate(result.graph);
+    emit(EventType::ValidationFinished);
+    return result;
+}
+
+generator::LevelGraph API::generate(
+    audio::AudioAnalysis const& analysis,
+    core::Settings const& settings
+) {
+    auto result = generate(GenerationRequest{&analysis, &settings});
+    return std::move(result.graph);
+}
+
 ValidationResult API::validate(generator::LevelGraph const& graph) {
     ValidationResult r;
     r.objects = graph.objects.size();
-    double lastTime = -100.0;
-    float lastX = -10000.f;
-    for (auto const& o : graph.objects) {
-        if (!std::isfinite(o.x) || !std::isfinite(o.y)) {
+
+    double lastTime = -1.0;
+    float lastX = -std::numeric_limits<float>::infinity();
+
+    for (std::size_t i = 0; i < graph.objects.size(); ++i) {
+        auto const& o = graph.objects[i];
+
+        if (!std::isfinite(o.x) || !std::isfinite(o.y) || !std::isfinite(o.time)) {
             r.playable = false;
             ++r.warnings;
-            r.messages.push_back("Non-finite object coordinate.");
+            r.messages.push_back("Non-finite generated object.");
+            continue;
         }
+
         if (o.x < lastX) {
             r.playable = false;
             ++r.warnings;
             r.messages.push_back("Object order is not monotonic.");
         }
-        if (o.time < lastTime) {
+
+        if (o.time + 1e-6 < lastTime) {
+            r.playable = false;
             ++r.warnings;
-            r.messages.push_back("Generated event timing is not monotonic.");
+            r.messages.push_back("Event timing is not monotonic.");
         }
+
+        if (i > 0 && o.x - lastX < 8.f) {
+            ++r.warnings;
+            r.messages.push_back("Objects are too close horizontally.");
+        }
+
         lastX = o.x;
         lastTime = o.time;
     }
+
     return r;
+}
+
+void API::setEventCallback(EventCallback callback) {
+    std::lock_guard lock(g_callbackMutex);
+    g_callback = std::move(callback);
+}
+
+void API::clearEventCallback() {
+    std::lock_guard lock(g_callbackMutex);
+    g_callback = nullptr;
 }
 }
