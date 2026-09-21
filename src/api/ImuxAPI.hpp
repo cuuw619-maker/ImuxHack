@@ -2,6 +2,7 @@
 #include "../audio/AudioTypes.hpp"
 #include "../generator/LevelGraph.hpp"
 #include "../core/Settings.hpp"
+#include <string>
 #include <vector>
 
 namespace imux {
