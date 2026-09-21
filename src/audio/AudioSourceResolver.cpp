@@ -1,7 +1,9 @@
 #include "AudioSourceResolver.hpp"
-#include "WavLoader.hpp"
+#include "Mp3Loader.hpp"
 #include <Geode/Geode.hpp>
 #include <array>
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 
 using namespace geode::prelude;
@@ -19,14 +21,18 @@ AudioSource AudioSourceResolver::fromLevelSong(int songID) {
 
     if (songID < 0) return source;
 
-    // Built-in/custom song locations differ between desktop and Android.
-    // We deliberately probe through CCFileUtils instead of hard-coding an absolute path.
-    std::array<std::string, 6> candidates = {
+    std::array<std::string, 12> candidates = {
+        fmt::format("Resources/music/{}.mp3", songID),
         fmt::format("Resources/music/{}.wav", songID),
+        fmt::format("Resources/music/{}.MP3", songID),
         fmt::format("Resources/music/{}.WAV", songID),
+        fmt::format("music/{}.mp3", songID),
         fmt::format("music/{}.wav", songID),
+        fmt::format("music/{}.MP3", songID),
         fmt::format("music/{}.WAV", songID),
+        fmt::format("songs/{}.mp3", songID),
         fmt::format("songs/{}.wav", songID),
+        fmt::format("songs/{}.MP3", songID),
         fmt::format("songs/{}.WAV", songID)
     };
 
@@ -45,17 +51,29 @@ AudioSource AudioSourceResolver::fromLevelSong(int songID) {
     return source;
 }
 
-bool AudioSourceResolver::resolveWav(
+bool AudioSourceResolver::load(
     AudioSource const& source,
-    std::vector<float>& mono,
-    float& sampleRate,
+    PCMBuffer& out,
     std::string& error
 ) {
-    PCMBuffer pcm;
-    if (!loadWav(source.path, pcm, error)) return false;
-    mono = std::move(pcm.mono);
-    sampleRate = pcm.sampleRate;
-    return true;
+    if (source.path.empty()) {
+        error = "Audio source path is empty.";
+        return false;
+    }
+
+    auto ext = std::filesystem::path(source.path).extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    if (ext == ".mp3")
+        return loadMp3(source.path, out, error);
+
+    if (ext == ".wav")
+        return loadWav(source.path, out, error);
+
+    error = fmt::format("Unsupported audio format '{}'.", ext);
+    return false;
 }
 
 }
