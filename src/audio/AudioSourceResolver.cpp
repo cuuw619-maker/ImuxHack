@@ -40,7 +40,7 @@ AudioSource AudioSourceResolver::fromLevelSong(int songID) {
     if (!files) return source;
 
     for (auto const& candidate : candidates) {
-        auto path = files->fullPathForFilename(candidate.c_str());
+        auto path = files->fullPathForFilename(candidate.c_str(), false);
         if (!path.empty() && std::filesystem::exists(path)) {
             source.path = path;
             source.displayName = candidate;
