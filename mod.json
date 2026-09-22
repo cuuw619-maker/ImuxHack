@@ -10,31 +10,121 @@
   "developer": "cuuw619-maker",
   "description": "Cross-platform music-driven Geometry Dash level generator with its own analysis, generation and validation API.",
   "repository": "https://github.com/cuuw619-maker/ImuxHack",
-  "links": { "source": "https://github.com/cuuw619-maker/ImuxHack" },
-  "dependencies": { "geode.node-ids": ">=v1.23.3" },
+  "links": {
+    "source": "https://github.com/cuuw619-maker/ImuxHack"
+  },
+  "dependencies": {
+    "geode.node-ids": ">=v1.23.3"
+  },
   "settings": {
     "audio-file": {
       "name": "Source audio",
-      "description": "Audio file used by the IMUX analyzer.",
+      "description": "Optional override audio. Empty means use the song assigned to the current level.",
       "type": "file",
       "default": "",
       "control": {
         "dialog": "open",
         "filters": [
-          { "description": "WAV audio", "files": ["wav"] }
+          {
+            "description": "MP3/WAV audio",
+            "files": [
+              "mp3",
+              "wav"
+            ]
+          }
         ]
       }
     },
-    "difficulty": { "name": "Difficulty", "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "density": { "name": "Object density", "type": "float", "default": 0.65, "min": 0.1, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "sync-strength": { "name": "Sync strength", "type": "float", "default": 0.9, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "movement": { "name": "Movement", "type": "float", "default": 0.55, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "decoration": { "name": "Decoration", "type": "float", "default": 0.45, "min": 0.0, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "beat-sensitivity": { "name": "Beat sensitivity", "type": "float", "default": 0.55, "min": 0.1, "max": 1.0, "control": { "slider": true, "slider-step": 0.05 } },
-    "seed": { "name": "Generator seed", "type": "int", "default": 1337 },
-    "show-beat-markers": { "name": "Show beat markers", "type": "bool", "default": true },
-    "show-energy": { "name": "Show energy", "type": "bool", "default": true },
-    "auto-gamemode": { "name": "Automatic gamemode", "type": "bool", "default": true },
-    "auto-speed": { "name": "Automatic speed", "type": "bool", "default": true }
+    "difficulty": {
+      "name": "Difficulty",
+      "type": "float",
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "density": {
+      "name": "Object density",
+      "type": "float",
+      "default": 0.65,
+      "min": 0.1,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "sync-strength": {
+      "name": "Sync strength",
+      "type": "float",
+      "default": 0.9,
+      "min": 0,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "movement": {
+      "name": "Movement",
+      "type": "float",
+      "default": 0.55,
+      "min": 0,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "decoration": {
+      "name": "Decoration",
+      "type": "float",
+      "default": 0.45,
+      "min": 0,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "beat-sensitivity": {
+      "name": "Beat sensitivity",
+      "type": "float",
+      "default": 0.55,
+      "min": 0.1,
+      "max": 1,
+      "control": {
+        "slider": true,
+        "slider-step": 0.05
+      }
+    },
+    "seed": {
+      "name": "Generator seed",
+      "type": "int",
+      "default": 1337
+    },
+    "show-beat-markers": {
+      "name": "Show beat markers",
+      "type": "bool",
+      "default": true
+    },
+    "show-energy": {
+      "name": "Show energy",
+      "type": "bool",
+      "default": true
+    },
+    "auto-gamemode": {
+      "name": "Automatic gamemode",
+      "type": "bool",
+      "default": true
+    },
+    "auto-speed": {
+      "name": "Automatic speed",
+      "type": "bool",
+      "default": true
+    }
   }
 }
