@@ -225,31 +225,41 @@ protected:
         m_status->setPosition({210.f, 145.f});
         m_mainLayer->addChild(m_status);
 
+        // Do not put the action menu inside m_buttonMenu.
+        // FLAlertLayer positions m_buttonMenu independently from m_mainLayer,
+        // so nested coordinates become incorrect on Android and can move the
+        // hitboxes outside the visible dialog.
         m_actionMenu = CCMenu::create();
-        m_actionMenu->setPosition({210.f, 78.f});
-        m_buttonMenu->addChild(m_actionMenu);
+        m_actionMenu->setPosition({210.f, 82.f});
+        m_actionMenu->setContentSize({380.f, 76.f});
+        m_actionMenu->setAnchorPoint({0.5f, 0.5f});
+        m_mainLayer->addChild(m_actionMenu, 20);
 
         auto generateSprite = ButtonSprite::create(
-            "GENERATE", 150, true, "goldFont.fnt",
+            "GENERATE", 170, true, "goldFont.fnt",
             "GJ_button_01.png", 0.f, 1.f
         );
         auto generate = CCMenuItemSpriteExtra::create(
             generateSprite, this,
             menu_selector(ImuxEditorPanel::onGenerate)
         );
-        generate->setPosition({-92.f, 0.f});
+        generate->setPosition({115.f, 38.f});
+        generate->setContentSize({170.f, 76.f});
         m_actionMenu->addChild(generate);
 
         auto levelSprite = ButtonSprite::create(
-            "LEVEL SONG", 150, true, "goldFont.fnt",
+            "LEVEL SONG", 170, true, "goldFont.fnt",
             "GJ_button_02.png", 0.f, 1.f
         );
         auto levelSong = CCMenuItemSpriteExtra::create(
             levelSprite, this,
             menu_selector(ImuxEditorPanel::onLevelSong)
         );
-        levelSong->setPosition({92.f, 0.f});
+        levelSong->setPosition({265.f, 38.f});
+        levelSong->setContentSize({170.f, 76.f});
         m_actionMenu->addChild(levelSong);
+
+        m_actionMenu->updateLayout();
 
         auto help = CCLabelBMFont::create(
             "No override = analyze the song assigned to this level.",
