@@ -4,6 +4,8 @@
 #include "../audio/AudioSourceResolver.hpp"
 #include "../api/ImuxAPI.hpp"
 #include "../core/Settings.hpp"
+#include <atomic>
+#include <thread>
 
 using namespace geode::prelude;
 
@@ -13,6 +15,8 @@ class ImuxEditorPanel final : public FLAlertLayer {
     CCLabelBMFont* m_source = nullptr;
     CCMenu* m_actionMenu = nullptr;
     bool m_busy = false;
+    std::atomic<bool> m_generationActive{false};
+    std::uint64_t m_generationSerial = 0;
 
     static int objectID(imux::generator::ObjectType type) {
         switch (type) {
@@ -50,99 +54,132 @@ class ImuxEditorPanel final : public FLAlertLayer {
     }
 
     bool generateLevel() {
-        if (m_busy) return false;
+        if (m_busy || m_generationActive.exchange(true))
+            return false;
 
         imux::core::load();
-        auto const& settings = imux::core::settings();
+        auto settings = imux::core::settings();
 
         imux::audio::AudioSource source;
-        if (!settings.audioFile.empty()) {
-            source = imux::audio::AudioSourceResolver::fromExplicitPath(
-                settings.audioFile
-            );
-        } else {
+        if (!settings.audioFile.empty())
+            source = imux::audio::AudioSourceResolver::fromExplicitPath(settings.audioFile);
+        else
             source = levelSongSource();
-        }
 
         if (source.path.empty()) {
+            m_generationActive.store(false);
             setStatus(
-                "No level audio found.\n"
+                "No level audio found.\\n"
                 "Set Source audio or make the level song available locally."
             );
             return false;
         }
 
-        imux::audio::PCMBuffer pcm;
-        std::string error;
-        if (!imux::audio::AudioSourceResolver::load(source, pcm, error)) {
-            setStatus(fmt::format("Audio error: {}", error));
-            return false;
-        }
-
-        setSource(source.fromLevel
-            ? fmt::format("LEVEL SONG: {}", source.displayName)
-            : "SOURCE: IMUX SETTING"
-        );
-
-        setBusy(true);
-        setStatus("Analyzing music...");
-
-        auto analysis = imux::API::analyze(
-            pcm.mono,
-            pcm.sampleRate,
-            settings.beatSensitivity
-        );
-
-        if (analysis.beats.empty()) {
-            setBusy(false);
-            setStatus("No usable beats. Lower Beat sensitivity and retry.");
-            return false;
-        }
-
-        auto result = imux::API::generate(
-            imux::GenerationRequest{&analysis, &settings}
-        );
-
-        if (result.graph.objects.empty()) {
-            setBusy(false);
-            setStatus("Generator produced no objects.");
-            return false;
-        }
-
         if (!m_levelEditor) {
-            setBusy(false);
+            m_generationActive.store(false);
             setStatus("Level editor is unavailable.");
             return false;
         }
 
-        std::size_t inserted = 0;
-        for (auto const& object : result.graph.objects) {
-            const int id = objectID(object.type);
-            if (id == 0) continue;
+        const auto serial = ++m_generationSerial;
+        const auto sourcePath = source.path;
+        const auto sourceName = source.displayName;
+        const bool fromLevel = source.fromLevel;
+        const float sensitivity = settings.beatSensitivity;
+        auto settingsCopy = settings;
 
-            auto gameObject = m_levelEditor->createObject(
-                id,
-                { object.x, object.y },
-                true
-            );
-            if (!gameObject) continue;
+        setSource(fromLevel
+            ? fmt::format("LEVEL SONG: {}", sourceName)
+            : "SOURCE: IMUX SETTING"
+        );
+        setBusy(true);
+        setStatus("Loading and analyzing music...");
 
-            gameObject->setRotation(object.rotation);
-            ++inserted;
-        }
+        this->retain();
 
-        m_levelEditor->updateEditor(0.f);
-        setBusy(false);
+        std::thread([this, serial, sourcePath, sourceName, fromLevel, sensitivity, settingsCopy]() mutable {
+            imux::audio::AudioSource source =
+                imux::audio::AudioSourceResolver::fromExplicitPath(sourcePath);
 
-        setStatus(fmt::format(
-            "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
-            inserted,
-            analysis.bpm,
-            analysis.beats.size(),
-            result.validation.warnings
-        ));
+            imux::audio::PCMBuffer pcm;
+            std::string error;
+            bool loaded = imux::audio::AudioSourceResolver::load(source, pcm, error);
 
-        return inserted > 0;
+            imux::audio::AudioAnalysis analysis;
+            imux::GenerationResult result;
+            if (loaded) {
+                analysis = imux::API::analyze(pcm.mono, pcm.sampleRate, sensitivity);
+                if (!analysis.beats.empty())
+                    result = imux::API::generate(
+                        imux::GenerationRequest{&analysis, &settingsCopy}
+                    );
+            }
+
+            geode::queueInMainThread([this, serial, loaded, error = std::move(error),
+                analysis = std::move(analysis), result = std::move(result)]() mutable {
+                if (serial != m_generationSerial) {
+                    m_generationActive.store(false);
+                    m_busy = false;
+                    this->release();
+                    return;
+                }
+
+                m_generationActive.store(false);
+
+                if (!loaded) {
+                    setBusy(false);
+                    setStatus(fmt::format("Audio error: {}", error));
+                    this->release();
+                    return;
+                }
+
+                if (analysis.beats.empty()) {
+                    setBusy(false);
+                    setStatus("No usable beats. Lower Beat sensitivity and retry.");
+                    this->release();
+                    return;
+                }
+
+                if (result.graph.objects.empty()) {
+                    setBusy(false);
+                    setStatus("Generator produced no objects.");
+                    this->release();
+                    return;
+                }
+
+                if (!m_levelEditor) {
+                    setBusy(false);
+                    setStatus("Level editor is unavailable.");
+                    this->release();
+                    return;
+                }
+
+                std::size_t inserted = 0;
+                for (auto const& object : result.graph.objects) {
+                    const int id = objectID(object.type);
+                    if (id == 0) continue;
+
+                    auto gameObject = m_levelEditor->createObject(
+                        id, {object.x, object.y}, true
+                    );
+                    if (!gameObject) continue;
+
+                    gameObject->setRotation(object.rotation);
+                    ++inserted;
+                }
+
+                m_levelEditor->updateEditor(0.f);
+                setBusy(false);
+                setStatus(fmt::format(
+                    "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
+                    inserted, analysis.bpm, analysis.beats.size(),
+                    result.validation.warnings
+                ));
+                this->release();
+            });
+        }).detach();
+
+        return true;
     }
 
 protected:
