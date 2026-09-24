@@ -15,7 +15,6 @@ LevelGraph LevelGenerator::generate(audio::AudioAnalysis const& a, core::Setting
     const float difficulty = std::clamp(s.difficulty, 0.f, 1.f);
     const float density = std::clamp(s.density, 0.1f, 1.f);
     const float sync = std::clamp(s.syncStrength, 0.f, 1.f);
-    const float movement = std::clamp(s.movement, 0.f, 1.f);
 
     double previousTime = -1.0;
     float x = 120.f;
