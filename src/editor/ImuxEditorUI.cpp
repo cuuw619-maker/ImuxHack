@@ -121,17 +121,11 @@ class ImuxEditorPanel final : public geode::Popup {
             bool loaded = imux::audio::AudioSourceResolver::load(source, pcm, error);
 
             imux::audio::AudioAnalysis analysis;
-            imux::GenerationResult result;
-            if (loaded) {
+            if (loaded)
                 analysis = imux::API::analyze(pcm.mono, pcm.sampleRate, sensitivity);
-                if (!analysis.beats.empty())
-                    result = imux::API::generate(
-                        imux::GenerationRequest{&analysis, &settingsCopy}
-                    );
-            }
 
             geode::queueInMainThread([this, serial, loaded, error = std::move(error),
-                analysis = std::move(analysis), result = std::move(result), settingsCopy]() mutable {
+                analysis = std::move(analysis), settingsCopy]() mutable {
                 if (serial != m_generationSerial) {
                     m_generationActive.store(false);
                     m_busy = false;
@@ -155,26 +149,9 @@ class ImuxEditorPanel final : public geode::Popup {
                     return;
                 }
 
-                if (result.graph.objects.empty()) {
-                    setBusy(false);
-                    setStatus("Generator produced no objects.");
-                    this->release();
-                    return;
-                }
-
-                // Never insert a candidate that the validator marked unsafe.
-                // This keeps generation separate from playtest: generate,
-                // validate, then commit to the editor.
-                if (!result.validation.playable) {
-                    setBusy(false);
-                    setStatus(fmt::format(
-                        "Rejected: unsafe candidate ({} warnings).",
-                        result.validation.warnings
-                    ));
-                    this->release();
-                    return;
-                }
-
+                // The live planner is now the authoritative generator. It
+                // evaluates candidates against the real player state and commits
+                // only actions that pass its predictive safety checks.
                 if (!m_levelEditor) {
                     setBusy(false);
                     setStatus("Level editor is unavailable.");
@@ -416,7 +393,9 @@ struct $modify(ImuxEditorUI, EditorUI) {
             [this] {
                 auto title = CCLabelBMFont::create("IMUX AI", "goldFont.fnt");
                 title->setScale(.38f);
-                return alpha::editor_tabs::createEditButtonBar({title});
+                std::vector<Ref<CCNode>> nodes;
+                nodes.push_back(title);
+                return alpha::editor_tabs::createEditButtonBar(nodes);
             },
             [] {
                 return CCSprite::createWithSpriteFrameName("GJ_plusBtn_001.png");
