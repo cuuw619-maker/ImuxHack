@@ -20,4 +20,12 @@ bool isModLoaded(std::string_view id);
 // select its own adapter without linking IMUX to an unrelated mod.
 std::string findFirstLoaded(std::vector<std::string_view> const& ids);
 
+struct APICapability {
+    std::string id;
+    std::string role;
+    bool loaded = false;
+};
+
+std::vector<APICapability> availableAPIs();
+
 } // namespace imux::integration
