@@ -11,6 +11,7 @@
 #include <alphalaneous.alphas_geode_utils/Utils.hpp>
 #include <alphalaneous.alphas-ui-pack/include/API.hpp>
 #include <nwo5.ui-scaling/include/include.hpp>
+#include <thesillydoggo.blur-api/BlurAPI.hpp>
 #include <atomic>
 #include <thread>
 
@@ -218,6 +219,9 @@ protected:
         if (!geode::Popup::init(420.f, 250.f))
             return false;
 
+        if (BlurAPI::isBlurAPIEnabled())
+            BlurAPI::addBlur(m_mainLayer);
+
         this->setTitle("IMUX GENERATOR", "goldFont.fnt", .62f, 20.f);
 
         m_infoScroll = alpha::ui::AdvancedScrollLayer::create({370.f, 58.f});
@@ -365,15 +369,20 @@ public:
 };
 
 struct $modify(ImuxEditorUI, EditorUI) {
+    struct Fields {
+        float editorScale = 1.f;
+    };
+
     bool init(LevelEditorLayer* levelEditor) {
         if (!EditorUI::init(levelEditor)) return false;
 
         imux::core::load();
 
+        m_fields->editorScale = nwo5::uiscaling::EditorUI::getScale();
         this->addEventListener(
             nwo5::uiscaling::EditorUI::Changed(),
             [this](float scale) {
-                m_editorScale = scale;
+                m_fields->editorScale = scale;
                 if (m_levelEditor) {
                     log::debug("ImuxHack: editor UI scale changed to {:.3f}", scale);
                 }
@@ -400,6 +409,28 @@ struct $modify(ImuxEditorUI, EditorUI) {
         button->setID("imux-generator-button");
         menu->addChild(button);
         menu->updateLayout();
+
+        alpha::editor_tabs::addTab(
+            "imux-ai-tab"_spr,
+            alpha::editor_tabs::BUILD,
+            [this] {
+                auto title = CCLabelBMFont::create("IMUX AI", "goldFont.fnt");
+                title->setScale(.38f);
+                return alpha::editor_tabs::createEditButtonBar({title});
+            },
+            [] {
+                return CCSprite::createWithSpriteFrameName("GJ_plusBtn_001.png");
+            },
+            [this](bool active, CCNode*) {
+                log::debug("ImuxHack EditorTab IMUX AI: {}", active ? "entered" : "left");
+            }
+        );
+
+        alpha::editor_tabs::addTabSwitchCallback([this](geode::ZStringView id) {
+            if (id == "imux-ai-tab") {
+                log::debug("ImuxHack: IMUX AI tab selected at UI scale {:.3f}", m_fields->editorScale);
+            }
+        });
 
         return true;
     }
