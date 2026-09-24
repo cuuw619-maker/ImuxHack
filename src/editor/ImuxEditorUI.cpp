@@ -390,7 +390,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
         alpha::editor_tabs::addTab(
             "imux-ai-tab"_spr,
             alpha::editor_tabs::BUILD,
-            [this] {
+            [] {
                 auto title = CCLabelBMFont::create("IMUX AI", "goldFont.fnt");
                 title->setScale(.38f);
                 std::vector<Ref<CCNode>> nodes;
@@ -400,16 +400,10 @@ struct $modify(ImuxEditorUI, EditorUI) {
             [] {
                 return CCSprite::createWithSpriteFrameName("GJ_plusBtn_001.png");
             },
-            [this](bool active, CCNode*) {
+            [](bool active, CCNode*) {
                 log::debug("ImuxHack EditorTab IMUX AI: {}", active ? "entered" : "left");
             }
         );
-
-        alpha::editor_tabs::addTabSwitchCallback([this](geode::ZStringView id) {
-            if (id == "imux-ai-tab") {
-                log::debug("ImuxHack: IMUX AI tab selected at UI scale {:.3f}", m_fields->editorScale);
-            }
-        });
 
         return true;
     }
