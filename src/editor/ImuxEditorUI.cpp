@@ -68,10 +68,7 @@ class ImuxEditorPanel final : public FLAlertLayer {
 
         if (source.path.empty()) {
             m_generationActive.store(false);
-            setStatus(
-                "No level audio found.\\n"
-                "Set Source audio or make the level song available locally."
-            );
+            setStatus("NO LEVEL AUDIO FOUND — SELECT AN AUDIO SOURCE");
             return false;
         }
 
@@ -186,88 +183,123 @@ protected:
     bool init(LevelEditorLayer* levelEditor) {
         m_levelEditor = levelEditor;
 
+        // Keep FLAlertLayer's own button menu only for CLOSE.
+        // All custom controls live in m_mainLayer so their visual bounds
+        // and touch bounds share exactly the same coordinate space.
         if (!FLAlertLayer::init(
             nullptr,
-            "IMUX GENERATOR",
+            "",
             "",
             "CLOSE",
             "",
-            420.f,
+            460.f,
             false,
-            280.f,
+            300.f,
             1.f
         )) return false;
 
-        auto title = CCLabelBMFont::create("IMUX MUSIC GENERATOR", "goldFont.fnt");
+        auto title = CCLabelBMFont::create(
+            "IMUX MUSIC GENERATOR",
+            "goldFont.fnt"
+        );
         title->setScale(.72f);
-        title->setPosition({210.f, 238.f});
-        m_mainLayer->addChild(title);
+        title->setPosition({230.f, 252.f});
+        m_mainLayer->addChild(title, 2);
 
         auto subtitle = CCLabelBMFont::create(
-            "MUSIC -> ANALYSIS -> PATTERNS -> GAMEPLAY",
+            "TURN YOUR SONG INTO GAMEPLAY",
             "bigFont.fnt"
         );
         subtitle->setScale(.38f);
-        subtitle->setPosition({210.f, 213.f});
-        m_mainLayer->addChild(subtitle);
+        subtitle->setPosition({230.f, 226.f});
+        m_mainLayer->addChild(subtitle, 2);
+
+        auto sourceTitle = CCLabelBMFont::create(
+            "AUDIO SOURCE",
+            "goldFont.fnt"
+        );
+        sourceTitle->setScale(.42f);
+        sourceTitle->setPosition({230.f, 194.f});
+        m_mainLayer->addChild(sourceTitle, 2);
 
         m_source = CCLabelBMFont::create(
-            "SOURCE: LEVEL SONG WHEN NO OVERRIDE IS SET",
+            "LEVEL SONG — AUTOMATIC",
             "bigFont.fnt"
         );
-        m_source->setScale(.34f);
-        m_source->setPosition({210.f, 184.f});
-        m_mainLayer->addChild(m_source);
+        m_source->setAlignment(kCCTextAlignmentCenter);
+        m_source->setScale(.38f);
+        m_source->setPosition({230.f, 174.f});
+        m_mainLayer->addChild(m_source, 2);
 
-        m_status = CCLabelBMFont::create("Ready.", "bigFont.fnt");
+        auto info = CCLabelBMFont::create(
+            "Leave the audio override empty to use this level's song.",
+            "bigFont.fnt"
+        );
+        info->setAlignment(kCCTextAlignmentCenter);
+        info->setScale(.30f);
+        info->setPosition({230.f, 151.f});
+        m_mainLayer->addChild(info, 2);
+
+        auto statusTitle = CCLabelBMFont::create(
+            "STATUS",
+            "goldFont.fnt"
+        );
+        statusTitle->setScale(.38f);
+        statusTitle->setPosition({230.f, 126.f});
+        m_mainLayer->addChild(statusTitle, 2);
+
+        m_status = CCLabelBMFont::create(
+            "READY — PRESS GENERATE",
+            "bigFont.fnt"
+        );
         m_status->setAlignment(kCCTextAlignmentCenter);
-        m_status->setScale(.40f);
-        m_status->setPosition({210.f, 145.f});
-        m_mainLayer->addChild(m_status);
+        m_status->setScale(.36f);
+        m_status->setPosition({230.f, 108.f});
+        m_mainLayer->addChild(m_status, 2);
 
-        // Do not put the action menu inside m_buttonMenu.
-        // FLAlertLayer positions m_buttonMenu independently from m_mainLayer,
-        // so nested coordinates become incorrect on Android and can move the
-        // hitboxes outside the visible dialog.
+        // This menu is intentionally a direct child of m_mainLayer.
+        // Positions are local to the visible dialog, avoiding the old
+        // m_buttonMenu coordinate mismatch that broke Android touches.
         m_actionMenu = CCMenu::create();
-        m_actionMenu->setPosition({210.f, 82.f});
-        m_actionMenu->setContentSize({380.f, 76.f});
-        m_actionMenu->setAnchorPoint({0.5f, 0.5f});
+        m_actionMenu->setPosition({230.f, 67.f});
         m_mainLayer->addChild(m_actionMenu, 20);
 
         auto generateSprite = ButtonSprite::create(
-            "GENERATE", 170, true, "goldFont.fnt",
+            "GENERATE", 180, true, "goldFont.fnt",
             "GJ_button_01.png", 0.f, 1.f
         );
         auto generate = CCMenuItemSpriteExtra::create(
-            generateSprite, this,
+            generateSprite,
+            this,
             menu_selector(ImuxEditorPanel::onGenerate)
         );
-        generate->setPosition({115.f, 38.f});
-        generate->setContentSize({170.f, 76.f});
+        generate->setContentSize({180.f, 58.f});
+        generate->setPosition({-96.f, 0.f});
         m_actionMenu->addChild(generate);
 
         auto levelSprite = ButtonSprite::create(
-            "LEVEL SONG", 170, true, "goldFont.fnt",
+            "LEVEL SONG", 180, true, "goldFont.fnt",
             "GJ_button_02.png", 0.f, 1.f
         );
         auto levelSong = CCMenuItemSpriteExtra::create(
-            levelSprite, this,
+            levelSprite,
+            this,
             menu_selector(ImuxEditorPanel::onLevelSong)
         );
-        levelSong->setPosition({265.f, 38.f});
-        levelSong->setContentSize({170.f, 76.f});
+        levelSong->setContentSize({180.f, 58.f});
+        levelSong->setPosition({96.f, 0.f});
         m_actionMenu->addChild(levelSong);
 
-        m_actionMenu->updateLayout();
+        m_actionMenu->setEnabled(true);
 
-        auto help = CCLabelBMFont::create(
-            "No override = analyze the song assigned to this level.",
+        auto hint = CCLabelBMFont::create(
+            "GENERATE  •  LEVEL SONG  •  CLOSE",
             "bigFont.fnt"
         );
-        help->setScale(.32f);
-        help->setPosition({210.f, 35.f});
-        m_mainLayer->addChild(help);
+        hint->setAlignment(kCCTextAlignmentCenter);
+        hint->setScale(.27f);
+        hint->setPosition({230.f, 30.f});
+        m_mainLayer->addChild(hint, 2);
 
         return true;
     }
