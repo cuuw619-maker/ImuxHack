@@ -6,15 +6,18 @@
   },
   "id": "cuuw619.imuxhack",
   "name": "ImuxHack",
-  "version": "v0.3.0",
+  "version": "v0.4.0",
   "developer": "cuuw619-maker",
-  "description": "Cross-platform music-driven Geometry Dash level generator with its own analysis, generation and validation API.",
+  "description": "Beat-synced Geometry Dash level generator with FFT analysis, playable preview workflow, validation and required NodeIDs API integration.",
   "repository": "https://github.com/cuuw619-maker/ImuxHack",
   "links": {
     "source": "https://github.com/cuuw619-maker/ImuxHack"
   },
   "dependencies": {
-    "geode.node-ids": ">=v1.23.3"
+    "geode.node-ids": {
+      "version": ">=v1.23.3",
+      "importance": "required"
+    }
   },
   "settings": {
     "audio-file": {
