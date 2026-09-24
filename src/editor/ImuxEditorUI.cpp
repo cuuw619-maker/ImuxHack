@@ -8,10 +8,10 @@
 #include "../integration/ThirdPartyAPI.hpp"
 #include "../generator/AgentBuilder.hpp"
 #include <EditorTabAPI.hpp>
-#include <alphalaneous.alphas_geode_utils/Utils.hpp>
-#include <alphalaneous.alphas-ui-pack/include/API.hpp>
+#include <Utils.hpp>
+#include <API.hpp>
 #include <nwo5.ui-scaling/include/include.hpp>
-#include <thesillydoggo.blur-api/BlurAPI.hpp>
+#include <BlurAPI.hpp>
 #include <atomic>
 #include <thread>
 
