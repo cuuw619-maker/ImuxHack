@@ -8,7 +8,7 @@
   "name": "ImuxHack",
   "version": "v0.4.0",
   "developer": "cuuw619-maker",
-  "description": "Beat-synced Geometry Dash level generator with FFT analysis, playable preview workflow, validation and soft API integrations.",
+  "description": "Beat-synced AI-style level generator with FFT analysis, native playtest planning, validation and required Geode API integrations.",
   "repository": "https://github.com/cuuw619-maker/ImuxHack",
   "links": {
     "source": "https://github.com/cuuw619-maker/ImuxHack"
@@ -123,5 +123,15 @@
       "type": "bool",
       "default": true
     }
+  },
+  "dependencies": {
+    "thesillydoggo.blur-api": "v1.0.0",
+    "alphalaneous.editortab_api": "v2.1.13",
+    "alphalaneous.alphas_geode_utils": "v1.2.5",
+    "nwo5.ui-scaling": "v2.1.2",
+    "rcg21.search-song-by-name": "v1.1.1",
+    "alphalaneous.alphas-ui-pack": "v1.4.4",
+    "geode.node-ids": ">=v1.23.3",
+    "nwo5.silly-api": ">=v2.0.0"
   }
 }
