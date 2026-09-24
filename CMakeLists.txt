@@ -16,3 +16,11 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 setup_geode_mod(${PROJECT_NAME}
     EXTERNALS nwo5.ui-scaling:2.1.2
 )
+
+# EditorTab-API publishes its header through the Geode dependency package,
+# but its include directory is not exposed by the current SDK toolchain.
+# Add both possible package layouts explicitly; nonexistent paths are harmless.
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/geode-deps/alphalaneous.editortab_api
+    ${CMAKE_CURRENT_BINARY_DIR}/geode-deps/alphalaneous.editortab_api/include
+)
