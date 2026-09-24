@@ -5,6 +5,7 @@
 #include "../audio/AudioSourceResolver.hpp"
 #include "../api/ImuxAPI.hpp"
 #include "../core/Settings.hpp"
+#include "../integration/ThirdPartyAPI.hpp"
 #include <atomic>
 #include <thread>
 
@@ -27,6 +28,7 @@ class ImuxEditorPanel final : public geode::Popup {
             case imux::generator::ObjectType::Block: return 1;
             case imux::generator::ObjectType::Spike: return 8;
             case imux::generator::ObjectType::Orb: return 36;
+            case imux::generator::ObjectType::Decoration: return 1;
             default: return 0;
         }
     }
@@ -65,6 +67,15 @@ class ImuxEditorPanel final : public geode::Popup {
 
         imux::core::load();
         auto settings = imux::core::settings();
+
+        // Keep the public integration contract explicit: the required
+        // geode.node-ids API is declared in mod.json and is also checked at
+        // runtime before a generation session starts.
+        if (!imux::integration::isModLoaded("geode.node-ids")) {
+            m_generationActive.store(false);
+            setStatus("Required third-party API geode.node-ids is missing.");
+            return false;
+        }
 
         imux::audio::AudioSource source;
         if (!settings.audioFile.empty())
@@ -186,11 +197,25 @@ class ImuxEditorPanel final : public geode::Popup {
 
                 m_levelEditor->updateEditor(0.f);
                 setBusy(false);
-                setStatus(fmt::format(
-                    "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
-                    inserted, analysis.bpm, analysis.beats.size(),
-                    result.validation.warnings
-                ));
+
+                // GENERATE is an end-to-end action: once the beat-synced
+                // candidate is validated and committed, immediately enter
+                // the real GD playtest so the player can drive the route.
+                auto editorUI = m_levelEditor->m_editorUI;
+                if (editorUI && inserted > 0) {
+                    setStatus(fmt::format(
+                        "Preview: {} objects | BPM {:.1f} | beats {}",
+                        inserted, analysis.bpm, analysis.beats.size()
+                    ));
+                    this->onClose(nullptr);
+                    editorUI->onPlaytest(nullptr);
+                } else {
+                    setStatus(fmt::format(
+                        "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
+                        inserted, analysis.bpm, analysis.beats.size(),
+                        result.validation.warnings
+                    ));
+                }
                 this->release();
             });
         }).detach();
