@@ -7,7 +7,7 @@
 #include "../core/Settings.hpp"
 #include "../integration/ThirdPartyAPI.hpp"
 #include "../generator/AgentBuilder.hpp"
-#include <alphalaneous.editortab_api/EditorTabAPI.hpp>
+#include <EditorTabAPI.hpp>
 #include <alphalaneous.alphas_geode_utils/Utils.hpp>
 #include <alphalaneous.alphas-ui-pack/include/API.hpp>
 #include <nwo5.ui-scaling/include/include.hpp>
