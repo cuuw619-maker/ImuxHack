@@ -131,7 +131,7 @@ class ImuxEditorPanel final : public geode::Popup {
             }
 
             geode::queueInMainThread([this, serial, loaded, error = std::move(error),
-                analysis = std::move(analysis), result = std::move(result)]() mutable {
+                analysis = std::move(analysis), result = std::move(result), settingsCopy]() mutable {
                 if (serial != m_generationSerial) {
                     m_generationActive.store(false);
                     m_busy = false;
@@ -281,12 +281,9 @@ public:
         geode::Popup::onEnter();
         if (!m_mainLayer) return;
         m_mainLayer->setScale(0.92f);
-        m_mainLayer->setOpacity(0);
-        m_mainLayer->runAction(CCSpawn::create(
-            CCEaseBackOut::create(CCScaleTo::create(0.20f, 1.f)),
-            CCFadeTo::create(0.16f, 255),
-            nullptr
-        ));
+        m_mainLayer->runAction(
+            CCEaseBackOut::create(CCScaleTo::create(0.20f, 1.f))
+        );
     }
 
     static ImuxEditorPanel* create(LevelEditorLayer* levelEditor) {
