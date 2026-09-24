@@ -8,6 +8,7 @@
 
 namespace imux::audio {
 namespace {
+constexpr float kPi = 3.14159265358979323846f;
 
 void fft(std::vector<std::complex<float>>& a) {
     const std::size_t n = a.size();
@@ -19,7 +20,7 @@ void fft(std::vector<std::complex<float>>& a) {
     }
 
     for (std::size_t len = 2; len <= n; len <<= 1) {
-        const float angle = -2.0f * static_cast<float>(M_PI) /
+        const float angle = -2.0f * kPi /
             static_cast<float>(len);
         const std::complex<float> wlen(std::cos(angle), std::sin(angle));
         for (std::size_t i = 0; i < n; i += len) {
@@ -69,7 +70,7 @@ AudioAnalysis BeatAnalyzer::analyze(
         std::fill(spectrum.begin(), spectrum.end(), std::complex<float>(0.f, 0.f));
 
         for (std::size_t j = 0; j < window; ++j) {
-            const float phase = 2.f * static_cast<float>(M_PI) *
+            const float phase = 2.f * kPi *
                 static_cast<float>(j) / static_cast<float>(window - 1);
             const float hann = 0.5f * (1.f - std::cos(phase));
             const float sample = mono[start + j];
