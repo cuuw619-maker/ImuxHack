@@ -69,15 +69,6 @@ class ImuxEditorPanel final : public geode::Popup {
         imux::core::load();
         auto settings = imux::core::settings();
 
-        // Keep the public integration contract explicit: the required
-        // geode.node-ids API is declared in mod.json and is also checked at
-        // runtime before a generation session starts.
-        if (!imux::integration::isModLoaded("geode.node-ids")) {
-            m_generationActive.store(false);
-            setStatus("Required third-party API geode.node-ids is missing.");
-            return false;
-        }
-
         imux::audio::AudioSource source;
         if (!settings.audioFile.empty())
             source = imux::audio::AudioSourceResolver::fromExplicitPath(settings.audioFile);
@@ -344,11 +335,6 @@ struct $modify(ImuxEditorUI, EditorUI) {
         if (!EditorUI::init(levelEditor)) return false;
 
         imux::core::load();
-
-        // Required third-party NodeIDs API: provide stable node IDs before
-        // looking up the editor toolbar, preserving compatibility with other
-        // Geode mods that share the same UI tree.
-        NodeIDs::provideFor(this);
 
         auto menu = this->getChildByID("toolbar-categories-menu");
         if (!menu) {
