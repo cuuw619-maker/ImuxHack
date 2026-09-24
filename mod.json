@@ -13,12 +13,13 @@
   "links": {
     "source": "https://github.com/cuuw619-maker/ImuxHack"
   },
-  "dependencies": {
-    "geode.node-ids": {
+  "dependencies": [
+    {
+      "id": "geode.node-ids",
       "version": ">=v1.23.3",
       "importance": "required"
     }
-  },
+  ],
   "settings": {
     "audio-file": {
       "name": "Source audio",
