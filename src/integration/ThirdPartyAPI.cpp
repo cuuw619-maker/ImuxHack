@@ -21,4 +21,12 @@ bool isModLoaded(std::string_view id) {
     return mod && mod->isEnabled();
 }
 
+std::string findFirstLoaded(std::vector<std::string_view> const& ids) {
+    for (auto id : ids) {
+        if (isModLoaded(id))
+            return std::string(id);
+    }
+    return {};
+}
+
 } // namespace imux::integration
