@@ -7,6 +7,10 @@
 #include "../core/Settings.hpp"
 #include "../integration/ThirdPartyAPI.hpp"
 #include "../generator/AgentBuilder.hpp"
+#include <alphalaneous.editortab_api/EditorTabAPI.hpp>
+#include <alphalaneous.alphas_geode_utils/Utils.hpp>
+#include <alphalaneous.alphas-ui-pack/include/API.hpp>
+#include <nwo5.ui-scaling/include/include.hpp>
 #include <atomic>
 #include <thread>
 
@@ -16,6 +20,8 @@ class ImuxEditorPanel final : public geode::Popup {
     LevelEditorLayer* m_levelEditor = nullptr;
     CCLabelBMFont* m_status = nullptr;
     CCLabelBMFont* m_source = nullptr;
+    alpha::ui::AdvancedScrollLayer* m_infoScroll = nullptr;
+    float m_editorScale = 1.f;
     CCMenuItemSpriteExtra* m_generateButton = nullptr;
     CCMenuItemSpriteExtra* m_levelSongButton = nullptr;
     CCMenuItemSpriteExtra* m_playtestButton = nullptr;
@@ -37,13 +43,15 @@ class ImuxEditorPanel final : public geode::Popup {
     void setStatus(std::string const& text) {
         if (!m_status) return;
         m_status->setString(text.c_str());
-        m_status->limitLabelWidth(360.f, .40f, .01f);
+        m_status->limitLabelWidth(340.f, .40f, .01f);
+        alpha::utils::cocos::setColorByHex(m_status, "E8E8E8");
     }
 
     void setSource(std::string const& text) {
         if (!m_source) return;
         m_source->setString(text.c_str());
-        m_source->limitLabelWidth(360.f, .34f, .01f);
+        m_source->limitLabelWidth(340.f, .34f, .01f);
+        alpha::utils::cocos::setColorByHex(m_source, "FFD84A");
     }
 
     void setBusy(bool busy) {
@@ -181,6 +189,11 @@ class ImuxEditorPanel final : public geode::Popup {
                     return;
                 }
 
+                auto currentTab = alpha::editor_tabs::getCurrentTab();
+                if (currentTab.isOk()) {
+                    log::debug("ImuxHack: generating from editor tab {}", currentTab.unwrap());
+                }
+
                 // The planner now owns the build. It enters native playtest,
                 // observes the real player, searches legal candidates and
                 // commits objects online on musical decision points.
@@ -207,23 +220,44 @@ protected:
 
         this->setTitle("IMUX GENERATOR", "goldFont.fnt", .62f, 20.f);
 
+        m_infoScroll = alpha::ui::AdvancedScrollLayer::create({370.f, 58.f});
+        if (m_infoScroll) {
+            m_infoScroll->setVerticalScroll(false);
+            m_infoScroll->setHorizontalScroll(false);
+            m_infoScroll->setDraggingEnabled(false);
+            m_infoScroll->setInnerContentSize({370.f, 58.f});
+            m_mainLayer->addChildAtPosition(
+                m_infoScroll, Anchor::Top, ccp(0.f, -69.f)
+            );
+        }
+
         m_source = CCLabelBMFont::create(
             "LEVEL SONG - AUTOMATIC", "bigFont.fnt"
         );
         m_source->setAlignment(kCCTextAlignmentCenter);
         m_source->setScale(.30f);
-        m_mainLayer->addChildAtPosition(
-            m_source, Anchor::Top, ccp(0.f, -52.f)
-        );
+        if (m_infoScroll)
+            m_infoScroll->getContentLayer()->addChildAtPosition(
+                m_source, Anchor::Top, ccp(0.f, -7.f)
+            );
+        else
+            m_mainLayer->addChildAtPosition(
+                m_source, Anchor::Top, ccp(0.f, -52.f)
+            );
 
         m_status = CCLabelBMFont::create(
             "READY", "bigFont.fnt"
         );
         m_status->setAlignment(kCCTextAlignmentCenter);
         m_status->setScale(.29f);
-        m_mainLayer->addChildAtPosition(
-            m_status, Anchor::Top, ccp(0.f, -76.f)
-        );
+        if (m_infoScroll)
+            m_infoScroll->getContentLayer()->addChildAtPosition(
+                m_status, Anchor::Top, ccp(0.f, -31.f)
+            );
+        else
+            m_mainLayer->addChildAtPosition(
+                m_status, Anchor::Top, ccp(0.f, -76.f)
+            );
 
         auto makeButton = [this](char const* text, char const* texture, cocos2d::SEL_MenuHandler selector) {
             auto sprite = ButtonSprite::create(
@@ -335,6 +369,16 @@ struct $modify(ImuxEditorUI, EditorUI) {
         if (!EditorUI::init(levelEditor)) return false;
 
         imux::core::load();
+
+        this->addEventListener(
+            nwo5::uiscaling::uiscaling::EditorUI::Changed(),
+            [this](float scale) {
+                m_editorScale = scale;
+                if (m_levelEditor) {
+                    log::debug("ImuxHack: editor UI scale changed to {:.3f}", scale);
+                }
+            }
+        );
 
         auto menu = this->getChildByID("toolbar-categories-menu");
         if (!menu) {
