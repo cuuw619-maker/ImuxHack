@@ -150,6 +150,19 @@ class ImuxEditorPanel final : public geode::Popup {
                     return;
                 }
 
+                // Never insert a candidate that the validator marked unsafe.
+                // This keeps generation separate from playtest: generate,
+                // validate, then commit to the editor.
+                if (!result.validation.playable) {
+                    setBusy(false);
+                    setStatus(fmt::format(
+                        "Rejected: unsafe candidate ({} warnings).",
+                        result.validation.warnings
+                    ));
+                    this->release();
+                    return;
+                }
+
                 if (!m_levelEditor) {
                     setBusy(false);
                     setStatus("Level editor is unavailable.");
