@@ -14,6 +14,8 @@ public:
                imux::core::Settings settings);
     void stop(bool keepObjects = true);
     bool isRunning() const { return m_running; }
+    void notifyPlaytestStopped() { m_running = false; }
+    static ImuxAgentBuilder* forEditor(LevelEditorLayer* editor);
 
 private:
     LevelEditorLayer* m_editor = nullptr;
