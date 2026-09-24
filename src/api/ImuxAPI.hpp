@@ -3,6 +3,7 @@
 #include "../audio/AudioTypes.hpp"
 #include "../generator/LevelGraph.hpp"
 #include "../core/Settings.hpp"
+#include <Geode/loader/Event.hpp>
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -36,6 +37,14 @@ enum class EventType {
 };
 
 using EventCallback = std::function<void(EventType)>;
+
+// Public Geode event for interoperability with other mods.
+class ImuxGenerationEvent final : public geode::GlobalEvent<
+    ImuxGenerationEvent, bool(EventType), EventType
+> {
+public:
+    using GlobalEvent::GlobalEvent;
+};
 
 class API {
 public:
