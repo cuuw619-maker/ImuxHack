@@ -94,6 +94,30 @@ ValidationResult API::validate(generator::LevelGraph const& graph) {
             r.messages.push_back("Objects are too close horizontally.");
         }
 
+        // Keep lethal objects on the supported ground route and leave enough
+        // horizontal room for a conservative normal Geometry Dash jump.
+        if (o.type == generator::ObjectType::Spike) {
+            for (std::size_t j = i; j-- > 0;) {
+                auto const& previous = graph.objects[j];
+                if (previous.type != generator::ObjectType::Spike)
+                    continue;
+
+                const float gap = o.x - previous.x;
+                if (gap < 70.f) {
+                    r.playable = false;
+                    ++r.warnings;
+                    r.messages.push_back("Spike spacing is below the safe jump interval.");
+                }
+                break;
+            }
+
+            if (o.y < 95.f || o.y > 115.f) {
+                r.playable = false;
+                ++r.warnings;
+                r.messages.push_back("Spike is outside the supported ground route.");
+            }
+        }
+
         lastX = o.x;
         lastTime = o.time;
     }
