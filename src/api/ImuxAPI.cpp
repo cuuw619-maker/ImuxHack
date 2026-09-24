@@ -19,7 +19,7 @@ void emit(EventType event) {
         callback = g_callback;
     }
     if (callback) callback(event);
-    ImuxGenerationEvent(event).send();
+    ImuxGenerationEvent().send(event);
 }
 }
 
