@@ -13,4 +13,4 @@ if (NOT DEFINED ENV{GEODE_SDK})
 endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-setup_geode_mod(${PROJECT_NAME})
+setup_geode_mod(${PROJECT_NAME}\n    EXTERNALS nwo5.ui-scaling:>=2.1.2\n)
