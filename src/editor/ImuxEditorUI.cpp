@@ -364,6 +364,11 @@ struct $modify(ImuxEditorUI, EditorUI) {
 
         imux::core::load();
 
+        // Required third-party NodeIDs API: provide stable node IDs before
+        // looking up the editor toolbar, preserving compatibility with other
+        // Geode mods that share the same UI tree.
+        NodeIDs::provideFor(this);
+
         auto menu = this->getChildByID("toolbar-categories-menu");
         if (!menu) {
             log::warn("ImuxHack: toolbar-categories-menu not found");
