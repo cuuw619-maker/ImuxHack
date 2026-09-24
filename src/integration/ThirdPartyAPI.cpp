@@ -10,7 +10,7 @@ std::vector<ModInfo> loadedMods() {
         if (!mod) continue;
         result.push_back(ModInfo{
             std::string(mod->getID()),
-            mod->isEnabled()
+            true
         });
     }
     return result;
@@ -18,7 +18,7 @@ std::vector<ModInfo> loadedMods() {
 
 bool isModLoaded(std::string_view id) {
     auto* mod = geode::Loader::get()->getLoadedMod(id);
-    return mod && mod->isEnabled();
+    return mod != nullptr;
 }
 
 std::string findFirstLoaded(std::vector<std::string_view> const& ids) {
