@@ -293,6 +293,18 @@ protected:
     }
 
 public:
+    void onEnter() override {
+        geode::Popup::onEnter();
+        if (!m_mainLayer) return;
+        m_mainLayer->setScale(0.92f);
+        m_mainLayer->setOpacity(0);
+        m_mainLayer->runAction(CCSpawn::create(
+            CCEaseBackOut::create(CCScaleTo::create(0.20f, 1.f)),
+            CCFadeTo::create(0.16f, 255),
+            nullptr
+        ));
+    }
+
     static ImuxEditorPanel* create(LevelEditorLayer* levelEditor) {
         auto result = new ImuxEditorPanel();
         if (result && result->init(levelEditor)) {
