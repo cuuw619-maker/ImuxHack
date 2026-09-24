@@ -6,6 +6,7 @@
 #include "../api/ImuxAPI.hpp"
 #include "../core/Settings.hpp"
 #include "../integration/ThirdPartyAPI.hpp"
+#include "../generator/AgentBuilder.hpp"
 #include <atomic>
 #include <thread>
 
@@ -181,42 +182,25 @@ class ImuxEditorPanel final : public geode::Popup {
                     return;
                 }
 
-                std::size_t inserted = 0;
-                for (auto const& object : result.graph.objects) {
-                    const int id = objectID(object.type);
-                    if (id == 0) continue;
-
-                    auto gameObject = m_levelEditor->createObject(
-                        id, {object.x, object.y}, true
-                    );
-                    if (!gameObject) continue;
-
-                    gameObject->setRotation(object.rotation);
-                    ++inserted;
+                auto agent = ImuxAgentBuilder::forEditor(m_levelEditor);
+                if (!agent) {
+                    setBusy(false);
+                    setStatus("Agent runtime is unavailable.");
+                    this->release();
+                    return;
                 }
 
-                m_levelEditor->updateEditor(0.f);
+                // The planner now owns the build. It enters native playtest,
+                // observes the real player, searches legal candidates and
+                // commits objects online on musical decision points.
                 setBusy(false);
+                setStatus(fmt::format(
+                    "AI planner started | BPM {:.1f} | beats {}",
+                    analysis.bpm, analysis.beats.size()
+                ));
+                this->onClose(nullptr);
+                agent->start(m_levelEditor, std::move(analysis), settingsCopy);
 
-                // GENERATE is an end-to-end action: once the beat-synced
-                // candidate is validated and committed, immediately enter
-                // the real GD playtest so the player can drive the route.
-                auto editorUI = m_levelEditor->m_editorUI;
-                if (editorUI && inserted > 0) {
-                    setStatus(fmt::format(
-                        "Preview: {} objects | BPM {:.1f} | beats {}",
-                        inserted, analysis.bpm, analysis.beats.size()
-                    ));
-                    this->onClose(nullptr);
-                    editorUI->onPlaytest(nullptr);
-                } else {
-                    setStatus(fmt::format(
-                        "Generated {} objects | BPM {:.1f} | beats {} | warnings {}",
-                        inserted, analysis.bpm, analysis.beats.size(),
-                        result.validation.warnings
-                    ));
-                }
-                this->release();
             });
         }).detach();
 
