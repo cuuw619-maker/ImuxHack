@@ -16,6 +16,8 @@ class ImuxEditorPanel final : public geode::Popup {
     CCLabelBMFont* m_source = nullptr;
     CCMenuItemSpriteExtra* m_generateButton = nullptr;
     CCMenuItemSpriteExtra* m_levelSongButton = nullptr;
+    CCMenuItemSpriteExtra* m_playtestButton = nullptr;
+    CCMenuItemSpriteExtra* m_closeButton = nullptr;
     bool m_busy = false;
     std::atomic<bool> m_generationActive{false};
     std::uint64_t m_generationSerial = 0;
@@ -45,6 +47,7 @@ class ImuxEditorPanel final : public geode::Popup {
         m_busy = busy;
         if (m_generateButton) m_generateButton->setEnabled(!busy);
         if (m_levelSongButton) m_levelSongButton->setEnabled(!busy);
+        if (m_playtestButton) m_playtestButton->setEnabled(!busy);
         setStatus(busy ? "IMUX is working..." : "Ready.");
     }
 
@@ -186,110 +189,66 @@ protected:
     bool init(LevelEditorLayer* levelEditor) {
         m_levelEditor = levelEditor;
 
-        // Use Geode's Popup layout: m_mainLayer and m_buttonMenu are both
-        // sized to the exact popup dimensions, and Anchor placement keeps
-        // rendering and touch coordinates identical on Android and desktop.
-        if (!geode::Popup::init(460.f, 300.f))
+        if (!geode::Popup::init(420.f, 250.f))
             return false;
 
-        this->setTitle("IMUX MUSIC GENERATOR", "goldFont.fnt", .62f, 20.f);
-
-        auto subtitle = CCLabelBMFont::create(
-            "TURN YOUR SONG INTO GAMEPLAY",
-            "bigFont.fnt"
-        );
-        subtitle->setScale(.34f);
-        m_mainLayer->addChildAtPosition(
-            subtitle, Anchor::Top, ccp(0.f, -48.f)
-        );
-
-        auto sourceTitle = CCLabelBMFont::create(
-            "AUDIO SOURCE",
-            "goldFont.fnt"
-        );
-        sourceTitle->setScale(.38f);
-        m_mainLayer->addChildAtPosition(
-            sourceTitle, Anchor::Top, ccp(0.f, -82.f)
-        );
+        this->setTitle("IMUX GENERATOR", "goldFont.fnt", .62f, 20.f);
 
         m_source = CCLabelBMFont::create(
-            "LEVEL SONG - AUTOMATIC",
-            "bigFont.fnt"
+            "LEVEL SONG - AUTOMATIC", "bigFont.fnt"
         );
         m_source->setAlignment(kCCTextAlignmentCenter);
-        m_source->setScale(.34f);
-        m_source->limitLabelWidth(400.f, .34f, .01f);
+        m_source->setScale(.30f);
         m_mainLayer->addChildAtPosition(
-            m_source, Anchor::Top, ccp(0.f, -104.f)
-        );
-
-        auto info = CCLabelBMFont::create(
-            "Empty override = current level song",
-            "bigFont.fnt"
-        );
-        info->setAlignment(kCCTextAlignmentCenter);
-        info->setScale(.29f);
-        m_mainLayer->addChildAtPosition(
-            info, Anchor::Top, ccp(0.f, -126.f)
-        );
-
-        auto statusTitle = CCLabelBMFont::create(
-            "STATUS",
-            "goldFont.fnt"
-        );
-        statusTitle->setScale(.34f);
-        m_mainLayer->addChildAtPosition(
-            statusTitle, Anchor::Center, ccp(0.f, 20.f)
+            m_source, Anchor::Top, ccp(0.f, -52.f)
         );
 
         m_status = CCLabelBMFont::create(
-            "READY - PRESS GENERATE",
-            "bigFont.fnt"
+            "READY", "bigFont.fnt"
         );
         m_status->setAlignment(kCCTextAlignmentCenter);
-        m_status->setScale(.32f);
-        m_status->limitLabelWidth(400.f, .32f, .01f);
+        m_status->setScale(.29f);
         m_mainLayer->addChildAtPosition(
-            m_status, Anchor::Center, ccp(0.f, -2.f)
+            m_status, Anchor::Top, ccp(0.f, -76.f)
         );
 
-        auto generateSprite = ButtonSprite::create(
-            "GENERATE", 170, true, "goldFont.fnt",
-            "GJ_button_01.png", 0.f, 1.f
+        auto makeButton = [this](char const* text, char const* texture, cocos2d::SEL_MenuHandler selector) {
+            auto sprite = ButtonSprite::create(
+                text, 135, true, "goldFont.fnt", texture, 0.f, 1.f
+            );
+            return CCMenuItemSpriteExtra::create(sprite, this, selector);
+        };
+
+        m_playtestButton = makeButton(
+            "PLAYTEST", "GJ_button_02.png",
+            menu_selector(ImuxEditorPanel::onPlaytest)
         );
-        m_generateButton = CCMenuItemSpriteExtra::create(
-            generateSprite,
-            this,
+        m_generateButton = makeButton(
+            "GENERATE", "GJ_button_01.png",
             menu_selector(ImuxEditorPanel::onGenerate)
         );
-
-        auto levelSprite = ButtonSprite::create(
-            "LEVEL SONG", 170, true, "goldFont.fnt",
-            "GJ_button_02.png", 0.f, 1.f
-        );
-        m_levelSongButton = CCMenuItemSpriteExtra::create(
-            levelSprite,
-            this,
+        m_levelSongButton = makeButton(
+            "LEVEL SONG", "GJ_button_02.png",
             menu_selector(ImuxEditorPanel::onLevelSong)
         );
-
-        // These are direct children of Geode's correctly-sized popup menu.
-        // Do not manually change content size or use nested menu coordinates.
-        m_buttonMenu->addChildAtPosition(
-            m_generateButton, Anchor::Center, ccp(-92.f, -70.f)
-        );
-        m_buttonMenu->addChildAtPosition(
-            m_levelSongButton, Anchor::Center, ccp(92.f, -70.f)
+        m_closeButton = makeButton(
+            "CLOSE", "GJ_button_03.png",
+            menu_selector(ImuxEditorPanel::onClosePanel)
         );
 
-        auto hint = CCLabelBMFont::create(
-            "GENERATE   |   LEVEL SONG",
-            "bigFont.fnt"
+        // Geode owns the popup button menu and sizes it to the popup.
+        // Keep every interactive control in this menu.
+        m_buttonMenu->addChildAtPosition(
+            m_playtestButton, Anchor::Center, ccp(-72.f, -32.f)
         );
-        hint->setAlignment(kCCTextAlignmentCenter);
-        hint->setScale(.25f);
-        m_mainLayer->addChildAtPosition(
-            hint, Anchor::Bottom, ccp(0.f, 24.f)
+        m_buttonMenu->addChildAtPosition(
+            m_generateButton, Anchor::Center, ccp(72.f, -32.f)
+        );
+        m_buttonMenu->addChildAtPosition(
+            m_levelSongButton, Anchor::Bottom, ccp(-72.f, 22.f)
+        );
+        m_buttonMenu->addChildAtPosition(
+            m_closeButton, Anchor::Bottom, ccp(72.f, 22.f)
         );
 
         return true;
@@ -308,6 +267,26 @@ public:
 
     void onGenerate(CCObject*) {
         generateLevel();
+    }
+
+    void onPlaytest(CCObject*) {
+        if (m_busy || !m_levelEditor)
+            return;
+
+        auto editorUI = m_levelEditor->m_editorUI;
+        if (!editorUI) {
+            setStatus("Editor playtest is unavailable.");
+            return;
+        }
+
+        // Use Geometry Dash's own playtest path. The popup closes first so
+        // the player gets the real editor/playtest controls and movement.
+        this->onClose(nullptr);
+        editorUI->onPlaytest(nullptr);
+    }
+
+    void onClosePanel(CCObject*) {
+        this->onClose(nullptr);
     }
 
     void onLevelSong(CCObject*) {
