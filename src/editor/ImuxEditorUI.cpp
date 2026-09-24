@@ -371,7 +371,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
         imux::core::load();
 
         this->addEventListener(
-            nwo5::uiscaling::uiscaling::EditorUI::Changed(),
+            nwo5::uiscaling::EditorUI::Changed(),
             [this](float scale) {
                 m_editorScale = scale;
                 if (m_levelEditor) {
