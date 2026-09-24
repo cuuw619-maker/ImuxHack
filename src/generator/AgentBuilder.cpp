@@ -6,6 +6,11 @@
 
 using namespace geode::prelude;
 
+ImuxAgentBuilder* ImuxAgentBuilder::forEditor(LevelEditorLayer* editor) {
+    if (!editor) return nullptr;
+    return typeinfo_cast<ImuxAgentBuilder*>(editor->getChildByID("imux-agent-builder"));
+}
+
 ImuxAgentBuilder* ImuxAgentBuilder::create() {
     auto ret = new ImuxAgentBuilder();
     if (ret && ret->init()) {
