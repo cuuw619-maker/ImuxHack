@@ -28,11 +28,20 @@ private:
     float m_lastSpikeX = -10000.f;
     float m_lastInputTime = -10.f;
     int m_actionIndex = 0;
+    float m_generationStartX = 0.f;
+    float m_lastDecisionX = -10000.f;
+    float m_lastBeatTime = -1.f;
+    std::size_t m_failedDecisions = 0;
+    std::size_t m_successfulDecisions = 0;
+    float m_endX = 0.f;
 
     void update(float dt) override;
     void thinkAndBuild(float dt);
     void controlPlayer(float dt);
     bool chooseAndPlace(float beatTime, float strength, imux::audio::BeatType type);
+    float musicX(float time) const;
+    float actionScore(int objectID, cocos2d::CCPoint pos, float beatTime, float strength, imux::audio::BeatType type) const;
+    bool predictedReachable(cocos2d::CCPoint pos, int objectID, float beatTime) const;
     bool candidateSafe(int objectID, cocos2d::CCPoint pos, float width) const;
     void placeObject(int objectID, cocos2d::CCPoint pos, float rotation = 0.f);
     float beatTime(std::size_t index) const;
