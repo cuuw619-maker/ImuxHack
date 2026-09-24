@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/ui/Popup.hpp>
 #include <Geode/modify/EditorUI.hpp>
 #include "../audio/WavLoader.hpp"
 #include "../audio/AudioSourceResolver.hpp"
@@ -9,11 +10,12 @@
 
 using namespace geode::prelude;
 
-class ImuxEditorPanel final : public FLAlertLayer {
+class ImuxEditorPanel final : public geode::Popup {
     LevelEditorLayer* m_levelEditor = nullptr;
     CCLabelBMFont* m_status = nullptr;
     CCLabelBMFont* m_source = nullptr;
-    CCMenu* m_actionMenu = nullptr;
+    CCMenuItemSpriteExtra* m_generateButton = nullptr;
+    CCMenuItemSpriteExtra* m_levelSongButton = nullptr;
     bool m_busy = false;
     std::atomic<bool> m_generationActive{false};
     std::uint64_t m_generationSerial = 0;
@@ -41,7 +43,8 @@ class ImuxEditorPanel final : public FLAlertLayer {
 
     void setBusy(bool busy) {
         m_busy = busy;
-        if (m_actionMenu) m_actionMenu->setEnabled(!busy);
+        if (m_generateButton) m_generateButton->setEnabled(!busy);
+        if (m_levelSongButton) m_levelSongButton->setEnabled(!busy);
         setStatus(busy ? "IMUX is working..." : "Ready.");
     }
 
@@ -183,123 +186,111 @@ protected:
     bool init(LevelEditorLayer* levelEditor) {
         m_levelEditor = levelEditor;
 
-        // Keep FLAlertLayer's own button menu only for CLOSE.
-        // All custom controls live in m_mainLayer so their visual bounds
-        // and touch bounds share exactly the same coordinate space.
-        if (!FLAlertLayer::init(
-            nullptr,
-            "",
-            "",
-            "CLOSE",
-            "",
-            460.f,
-            false,
-            300.f,
-            1.f
-        )) return false;
+        // Use Geode's Popup layout: m_mainLayer and m_buttonMenu are both
+        // sized to the exact popup dimensions, and Anchor placement keeps
+        // rendering and touch coordinates identical on Android and desktop.
+        if (!geode::Popup::init(460.f, 300.f))
+            return false;
 
-        auto title = CCLabelBMFont::create(
-            "IMUX MUSIC GENERATOR",
-            "goldFont.fnt"
-        );
-        title->setScale(.72f);
-        title->setPosition({230.f, 252.f});
-        m_mainLayer->addChild(title, 2);
+        this->setTitle("IMUX MUSIC GENERATOR", "goldFont.fnt", .62f, 20.f);
 
         auto subtitle = CCLabelBMFont::create(
             "TURN YOUR SONG INTO GAMEPLAY",
             "bigFont.fnt"
         );
-        subtitle->setScale(.38f);
-        subtitle->setPosition({230.f, 226.f});
-        m_mainLayer->addChild(subtitle, 2);
+        subtitle->setScale(.34f);
+        m_mainLayer->addChildAtPosition(
+            subtitle, Anchor::Top, ccp(0.f, -48.f)
+        );
 
         auto sourceTitle = CCLabelBMFont::create(
             "AUDIO SOURCE",
             "goldFont.fnt"
         );
-        sourceTitle->setScale(.42f);
-        sourceTitle->setPosition({230.f, 194.f});
-        m_mainLayer->addChild(sourceTitle, 2);
+        sourceTitle->setScale(.38f);
+        m_mainLayer->addChildAtPosition(
+            sourceTitle, Anchor::Top, ccp(0.f, -82.f)
+        );
 
         m_source = CCLabelBMFont::create(
-            "LEVEL SONG — AUTOMATIC",
+            "LEVEL SONG - AUTOMATIC",
             "bigFont.fnt"
         );
         m_source->setAlignment(kCCTextAlignmentCenter);
-        m_source->setScale(.38f);
-        m_source->setPosition({230.f, 174.f});
-        m_mainLayer->addChild(m_source, 2);
+        m_source->setScale(.34f);
+        m_source->limitLabelWidth(400.f, .34f, .01f);
+        m_mainLayer->addChildAtPosition(
+            m_source, Anchor::Top, ccp(0.f, -104.f)
+        );
 
         auto info = CCLabelBMFont::create(
-            "Leave the audio override empty to use this level's song.",
+            "Empty override = current level song",
             "bigFont.fnt"
         );
         info->setAlignment(kCCTextAlignmentCenter);
-        info->setScale(.30f);
-        info->setPosition({230.f, 151.f});
-        m_mainLayer->addChild(info, 2);
+        info->setScale(.29f);
+        m_mainLayer->addChildAtPosition(
+            info, Anchor::Top, ccp(0.f, -126.f)
+        );
 
         auto statusTitle = CCLabelBMFont::create(
             "STATUS",
             "goldFont.fnt"
         );
-        statusTitle->setScale(.38f);
-        statusTitle->setPosition({230.f, 126.f});
-        m_mainLayer->addChild(statusTitle, 2);
+        statusTitle->setScale(.34f);
+        m_mainLayer->addChildAtPosition(
+            statusTitle, Anchor::Center, ccp(0.f, 20.f)
+        );
 
         m_status = CCLabelBMFont::create(
-            "READY — PRESS GENERATE",
+            "READY - PRESS GENERATE",
             "bigFont.fnt"
         );
         m_status->setAlignment(kCCTextAlignmentCenter);
-        m_status->setScale(.36f);
-        m_status->setPosition({230.f, 108.f});
-        m_mainLayer->addChild(m_status, 2);
-
-        // This menu is intentionally a direct child of m_mainLayer.
-        // Positions are local to the visible dialog, avoiding the old
-        // m_buttonMenu coordinate mismatch that broke Android touches.
-        m_actionMenu = CCMenu::create();
-        m_actionMenu->setPosition({230.f, 67.f});
-        m_mainLayer->addChild(m_actionMenu, 20);
+        m_status->setScale(.32f);
+        m_status->limitLabelWidth(400.f, .32f, .01f);
+        m_mainLayer->addChildAtPosition(
+            m_status, Anchor::Center, ccp(0.f, -2.f)
+        );
 
         auto generateSprite = ButtonSprite::create(
-            "GENERATE", 180, true, "goldFont.fnt",
+            "GENERATE", 170, true, "goldFont.fnt",
             "GJ_button_01.png", 0.f, 1.f
         );
-        auto generate = CCMenuItemSpriteExtra::create(
+        m_generateButton = CCMenuItemSpriteExtra::create(
             generateSprite,
             this,
             menu_selector(ImuxEditorPanel::onGenerate)
         );
-        generate->setContentSize({180.f, 58.f});
-        generate->setPosition({-96.f, 0.f});
-        m_actionMenu->addChild(generate);
 
         auto levelSprite = ButtonSprite::create(
-            "LEVEL SONG", 180, true, "goldFont.fnt",
+            "LEVEL SONG", 170, true, "goldFont.fnt",
             "GJ_button_02.png", 0.f, 1.f
         );
-        auto levelSong = CCMenuItemSpriteExtra::create(
+        m_levelSongButton = CCMenuItemSpriteExtra::create(
             levelSprite,
             this,
             menu_selector(ImuxEditorPanel::onLevelSong)
         );
-        levelSong->setContentSize({180.f, 58.f});
-        levelSong->setPosition({96.f, 0.f});
-        m_actionMenu->addChild(levelSong);
 
-        m_actionMenu->setEnabled(true);
+        // These are direct children of Geode's correctly-sized popup menu.
+        // Do not manually change content size or use nested menu coordinates.
+        m_buttonMenu->addChildAtPosition(
+            m_generateButton, Anchor::Center, ccp(-92.f, -70.f)
+        );
+        m_buttonMenu->addChildAtPosition(
+            m_levelSongButton, Anchor::Center, ccp(92.f, -70.f)
+        );
 
         auto hint = CCLabelBMFont::create(
-            "GENERATE  •  LEVEL SONG  •  CLOSE",
+            "GENERATE   |   LEVEL SONG",
             "bigFont.fnt"
         );
         hint->setAlignment(kCCTextAlignmentCenter);
-        hint->setScale(.27f);
-        hint->setPosition({230.f, 30.f});
-        m_mainLayer->addChild(hint, 2);
+        hint->setScale(.25f);
+        m_mainLayer->addChildAtPosition(
+            hint, Anchor::Bottom, ccp(0.f, 24.f)
+        );
 
         return true;
     }
