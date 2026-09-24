@@ -19,7 +19,9 @@ LevelGraph LevelGenerator::generate(audio::AudioAnalysis const& a, core::Setting
 
     double previousTime = -1.0;
     float x = 120.f;
-    float laneY = 105.f;
+    constexpr float groundY = 105.f;
+    constexpr float minHazardGap = 70.f;
+    float lastHazardX = -1000.f;
     std::size_t index = 0;
 
     auto add = [&](ObjectType type, float xx, float yy, double time, float importance) {
@@ -42,35 +44,33 @@ LevelGraph LevelGenerator::generate(audio::AudioAnalysis const& a, core::Setting
         x += beatDistance * (0.65f + 0.35f * sync);
 
         const float energy = std::clamp(beat.strength, 0.f, 1.f);
-        const float movementAmount =
-            (0.15f + movement * 0.85f) * (0.35f + energy * 0.65f);
+        // Keep the playable route on a stable ground line. Movement is
+        // expressed by optional orbs rather than moving lethal objects.
+        const bool structural =
+            beat.type == audio::BeatType::Downbeat || energy > 0.78f;
+        const bool canPlaceHazard = (x - lastHazardX) >= minHazardGap;
 
-        if (index > 0) {
-            const int direction = (index % 2 == 0) ? 1 : -1;
-            laneY += direction * movementAmount * (8.f + 16.f * difficulty);
-            laneY = std::clamp(laneY, 75.f, 135.f);
-        }
-
-        // Downbeats and strong onsets form the primary structural anchors.
-        const bool structural = beat.type == audio::BeatType::Downbeat || energy > 0.78f;
-
-        if (structural) {
-            add(ObjectType::Spike, x, laneY, beat.time, energy);
-        } else if (energy > 0.52f && difficulty > 0.22f) {
-            add(ObjectType::Orb, x, laneY + 22.f + difficulty * 8.f, beat.time, energy);
+        if (structural && canPlaceHazard) {
+            add(ObjectType::Spike, x, groundY, beat.time, energy);
+            lastHazardX = x;
+        } else if (energy > 0.52f && difficulty > 0.22f && canPlaceHazard) {
+            add(ObjectType::Orb, x, groundY + 28.f, beat.time, energy);
+            lastHazardX = x;
         } else {
-            add(ObjectType::Block, x, laneY - 18.f, beat.time, energy);
+            add(ObjectType::Block, x, groundY, beat.time, energy);
         }
 
         // Add a secondary object only for dense, strong events. This creates
         // rhythm subdivisions without placing something on every sample.
         if (density > 0.72f && energy > 0.68f && (index % 2 == 0)) {
             const float offset = 22.f + jitter(rng) * 5.f;
-            add(ObjectType::Block, x + offset, laneY - 18.f, beat.time, energy * 0.7f);
+            if (x + offset - lastHazardX >= minHazardGap) {
+                add(ObjectType::Block, x + offset, groundY, beat.time, energy * 0.7f);
+            }
         }
 
         if (s.decoration > 0.25f && energy > 0.82f && index % 4 == 0) {
-            add(ObjectType::Decoration, x, laneY + 42.f, beat.time, energy * s.decoration);
+            add(ObjectType::Decoration, x, groundY + 42.f, beat.time, energy * s.decoration);
         }
 
         ++index;
