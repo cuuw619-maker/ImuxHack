@@ -360,9 +360,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
             nwo5::uiscaling::EditorUI::Changed(),
             [this](float scale) {
                 m_fields->editorScale = scale;
-                if (m_levelEditor) {
-                    log::debug("ImuxHack: editor UI scale changed to {:.3f}", scale);
-                }
+                log::debug("ImuxHack: editor UI scale changed to {:.3f}", scale);
             }
         );
 
