@@ -95,3 +95,5 @@ AudioSource AudioSourceResolver::fromLevelSong(GJGameLevel* level) {
     return fromLevelSong(level->m_songID);
 }
 
+
+} // namespace imux::audio
