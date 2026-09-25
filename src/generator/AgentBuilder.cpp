@@ -307,6 +307,26 @@ bool ImuxAgentBuilder::chooseAndPlace(
     return true;
 }
 
+void ImuxAgentBuilder::placeObject(int objectID, CCPoint pos, float rotation) {
+    if (!m_editor || objectID <= 0 || !std::isfinite(pos.x) || !std::isfinite(pos.y))
+        return;
+
+    auto object = m_editor->createObject(objectID, pos, false);
+    if (!object)
+        return;
+
+    if (std::isfinite(rotation) && std::abs(rotation) > 0.001f)
+        object->setRotation(rotation);
+
+    m_lastPlacedX = pos.x;
+    if (objectID == 8)
+        m_lastSpikeX = pos.x;
+
+    // Keep the editor's object bookkeeping in sync so the newly created
+    // object participates in selection, undo and playtest collision state.
+    m_editor->updateEditor(0.f);
+}
+
 void ImuxAgentBuilder::emergencyInput() {
     auto p = m_editor ? m_editor->m_player1 : nullptr;
     if (!p)
