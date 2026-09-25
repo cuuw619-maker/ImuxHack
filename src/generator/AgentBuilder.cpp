@@ -62,45 +62,14 @@ void ImuxAgentBuilder::start(
     m_endX = m_generationStartX +
         std::max(180.f, static_cast<float>(m_analysis.duration) * unitsPerSecond);
 
-    // First pass: build a complete deterministic level graph from the analyzed
-    // song before playtest starts. The live agent then uses playtest feedback
-    // as a second pass to refine/extend the layout. This guarantees that a
-    // successful analysis produces actual editor objects even if the native
-    // playtest player is not initialized on the first frame.
-    auto generated = imux::API::generate(m_analysis, m_settings);
-    if (!generated.objects.empty()) {
-        const float graphOrigin = 120.f;
-        const float shiftX = m_generationStartX - graphOrigin;
-        std::size_t placed = 0;
-        for (auto const& object : generated.objects) {
-            int id = 0;
-            switch (object.type) {
-                case imux::generator::ObjectType::Block: id = 1; break;
-                case imux::generator::ObjectType::Spike: id = 8; break;
-                case imux::generator::ObjectType::Orb: id = 36; break;
-                case imux::generator::ObjectType::Decoration: id = 1; break;
-                default: break;
-            }
-            if (!id) continue;
-
-            const CCPoint pos{object.x + shiftX, object.y};
-            if (!std::isfinite(pos.x) || !std::isfinite(pos.y))
-                continue;
-
-            auto created = editor->createObject(id, pos, false);
-            if (created) {
-                ++placed;
-                m_lastPlacedX = std::max(m_lastPlacedX, pos.x);
-                if (id == 8)
-                    m_lastSpikeX = pos.x;
-            }
-        }
-
-        log::info(
-            "ImuxHack: generated {} editor objects from {} analyzed beats",
-            placed, m_analysis.beats.size()
-        );
-    }
+    // Do not pre-generate the whole level here. The native playtest must
+    // start first, and the agent builds only the near-future section while
+    // observing the real player state. A complete pre-pass can place objects
+    // that are already impossible by the time the player reaches them.
+    log::info(
+        "ImuxHack: starting live generation from {} analyzed beats",
+        m_analysis.beats.size()
+    );
 
     if (editor->m_editorUI)
         editor->m_editorUI->onPlaytest(nullptr);
