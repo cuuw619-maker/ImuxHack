@@ -14,6 +14,7 @@ class AudioSourceResolver {
 public:
     static AudioSource fromExplicitPath(std::string const& path);
     static AudioSource fromLevelSong(int songID);
+    static AudioSource fromLevelSong(GJGameLevel* level);
 
     static bool load(
         AudioSource const& source,
