@@ -66,9 +66,7 @@ class ImuxEditorPanel final : public geode::Popup {
     imux::audio::AudioSource levelSongSource() const {
         if (!m_levelEditor || !m_levelEditor->m_level)
             return {};
-        return imux::audio::AudioSourceResolver::fromLevelSong(
-            m_levelEditor->m_level->m_songID
-        );
+        return imux::audio::AudioSourceResolver::fromLevelSong(m_levelEditor->m_level);
     }
 
     bool generateLevel() {
