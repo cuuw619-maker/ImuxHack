@@ -95,5 +95,41 @@ AudioSource AudioSourceResolver::fromLevelSong(GJGameLevel* level) {
     return fromLevelSong(level->m_songID);
 }
 
+bool AudioSourceResolver::load(
+    AudioSource const& source,
+    PCMBuffer& out,
+    std::string& error
+) {
+    out = {};
+    error.clear();
+
+    if (source.path.empty()) {
+        error = "Audio source path is empty.";
+        return false;
+    }
+
+    auto lower = source.path;
+    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    if (lower.size() >= 4 && lower.substr(lower.size() - 4) == ".wav")
+        return loadWav(source.path, out, error);
+
+    if (lower.size() >= 4 && lower.substr(lower.size() - 4) == ".mp3")
+        return loadMp3(source.path, out, error);
+
+    // Try WAV first, then MP3 for custom/extensionless song paths.
+    if (loadWav(source.path, out, error))
+        return true;
+
+    out = {};
+    std::string mp3Error;
+    if (loadMp3(source.path, out, mp3Error))
+        return true;
+
+    error = !mp3Error.empty() ? mp3Error : "Unsupported audio format.";
+    return false;
+}
 
 } // namespace imux::audio
