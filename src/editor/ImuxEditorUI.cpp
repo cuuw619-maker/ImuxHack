@@ -7,11 +7,11 @@
 #include "../core/Settings.hpp"
 #include "../integration/ThirdPartyAPI.hpp"
 #include "../generator/AgentBuilder.hpp"
-#include <EditorTabAPI.hpp>
-#include <Utils.hpp>
+#include "../thirdparty/EditorTabAPI.hpp"
+#include "../thirdparty/AlphaUtils.hpp"
 #include <API.hpp>
 #include <nwo5.ui-scaling/include/include.hpp>
-#include <BlurAPI.hpp>
+#include "../thirdparty/BlurAPI.hpp"
 #include <atomic>
 #include <thread>
 
