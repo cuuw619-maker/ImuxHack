@@ -355,6 +355,7 @@ struct $modify(ImuxEditorUI, EditorUI) {
 
         imux::core::load();
 
+        log::info("EDITOR UI SCALING & API v2.1.1");
         m_fields->editorScale = nwo5::uiscaling::EditorUI::getScale();
         this->addEventListener(
             nwo5::uiscaling::EditorUI::Changed(),
