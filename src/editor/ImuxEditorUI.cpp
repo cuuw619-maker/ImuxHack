@@ -10,7 +10,7 @@
 #include "../thirdparty/EditorTabAPI.hpp"
 #include "../thirdparty/AlphaUtils.hpp"
 #include <alphalaneous.alphas-ui-pack/include/API.hpp>
-#include <nwo5.ui-scaling/include/include.hpp>
+#include "../thirdparty/UIScalingAPI.hpp"
 #include "../thirdparty/BlurAPI.hpp"
 #include <atomic>
 #include <thread>
