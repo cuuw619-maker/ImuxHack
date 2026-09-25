@@ -14,7 +14,7 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 setup_geode_mod(${PROJECT_NAME}
-    EXTERNALS nwo5.ui-scaling:2.1.2
+    EXTERNALS nwo5.ui-scaling:2.1.1
 )
 
 # EditorTab-API publishes its header through the Geode dependency package,
